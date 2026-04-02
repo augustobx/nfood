@@ -1,0 +1,153 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model SystemConfig {
+  id              String  @id @default(uuid())
+  appName         String  @default("nfood")
+  logoUrl         String?
+  splashUrl       String?
+  backgroundUrl   String?
+  whatsappMessage String  @default("Hola, tu pedido está en estado: {{estado}}. Gracias por elegirnos!")
+  isStoreOpen     Boolean @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model BusinessHour {
+  id        String   @id @default(uuid())
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday...
+  openTime  String   // HH:mm
+  closeTime String   // HH:mm
+  isOpen    Boolean  @default(true)
+}
+
+model Messenger {
+  id        String  @id @default(uuid())
+  name      String
+  phone     String
+  isActive  Boolean @default(true)
+  orders    Order[]
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String
+  isActive Boolean   @default(true)
+  sequence Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String       @id @default(uuid())
+  name        String
+  categoryId  String
+  basePrice   Float
+  description String?
+  imageUrl    String?
+  isActive    Boolean      @default(true)
+  isCombo     Boolean      @default(false)
+  
+  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  ingredients Ingredient[]
+  extras      ProductExtra[]
+  orderItems  OrderItem[]
+}
+
+model Ingredient {
+  id              String                   @id @default(uuid())
+  productId       String
+  name            String
+  isRemovable     Boolean                  @default(true)
+  product         Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  removedInOrders OrderItemRemovedIngredient[]
+}
+
+model Extra {
+  id          String         @id @default(uuid())
+  name        String
+  price       Float
+  isActive    Boolean        @default(true)
+  products    ProductExtra[]
+  orderExtras OrderItemExtra[]
+}
+
+model ProductExtra {
+  productId String
+  extraId   String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  extra     Extra   @relation(fields: [extraId], references: [id], onDelete: Cascade)
+
+  @@id([productId, extraId])
+}
+
+model Order {
+  id               String   @id @default(uuid())
+  clientName       String
+  clientPhone      String
+  needsDelivery    Boolean
+  deliveryAddress  String?
+  deliveryTime     String?
+  status           String   @default("NEW") // NEW, IN_PROCESS, FINISHED, DELIVERED, CANCELLED
+  paymentMethod    String   // CASH, MERCADOPAGO
+  paymentStatus    String   @default("PENDING") // PENDING, PAID, FAILED
+  mpPreferenceId   String?
+  total            Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  messengerId      String?
+  messenger        Messenger? @relation(fields: [messengerId], references: [id])
+
+  items            OrderItem[]
+  history          OrderHistory[]
+}
+
+model OrderItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  productId       String
+  quantity        Int
+  unitPrice       Float
+  subtotal        Float
+  notes           String?
+
+  order                 Order                        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product               Product                      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  removedIngredients    OrderItemRemovedIngredient[]
+  addedExtras           OrderItemExtra[]
+}
+
+model OrderItemRemovedIngredient {
+  orderItemId  String
+  ingredientId String
+
+  orderItem    OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient  @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([orderItemId, ingredientId])
+}
+
+model OrderItemExtra {
+  orderItemId String
+  extraId     String
+  price       Float
+
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  extra       Extra     @relation(fields: [extraId], references: [id], onDelete: Restrict)
+
+  @@id([orderItemId, extraId])
+}
+
+model OrderHistory {
+  id        String   @id @default(uuid())
+  orderId   String
+  status    String
+  createdAt DateTime @default(now())
+  
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
