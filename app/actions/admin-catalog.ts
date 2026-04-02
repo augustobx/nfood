@@ -19,7 +19,7 @@ export async function toggleCategory(id: string, isActive: boolean) {
   } catch (error) { return { success: false, error: "Error al actualizar categoría" }; }
 }
 
-export async function addProduct(data: { name: string, basePrice: number, description: string, categoryId: string, imageUrl: string, ingredientIds: string[], extraIds: string[] }) {
+export async function addProduct(data: { name: string, basePrice: number, description: string, categoryId: string, imageUrl: string, ingredientsData: {id: string, quantity: number}[], extraIds: string[] }) {
   try {
     await prisma.product.create({ 
       data: { 
@@ -30,7 +30,7 @@ export async function addProduct(data: { name: string, basePrice: number, descri
         imageUrl: data.imageUrl,
         isActive: true,
         ingredients: {
-          create: data.ingredientIds.map(id => ({ ingredientId: id, isRemovable: true }))
+          create: data.ingredientsData.map(ing => ({ ingredientId: ing.id, isRemovable: true, quantity: ing.quantity }))
         },
         extras: {
           create: data.extraIds.map(id => ({ extraId: id }))
