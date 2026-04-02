@@ -7,14 +7,26 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const createPrismaClient = () => {
-  // Configuración explícita: Al no usar la URL del .env, el driver 
-  // no puede confundirse ni intentar usar tu usuario de Windows (abasq).
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("Falta definir DATABASE_URL en el archivo .env");
+  }
+
+  // Desarmamos la URL de tu .env de forma segura
+  const dbUrl = new URL(connectionString);
+
+  // FIX PARA XAMPP: Forzamos IPv4. Evita que se quede 10 segundos esperando (Timeout)
+  const dbHost = dbUrl.hostname === "localhost" ? "127.0.0.1" : dbUrl.hostname;
+
+  // ERROR CORREGIDO: En Prisma 7, las credenciales van DIRECTAMENTE al adaptador.
+  // Ya NO se usa mariadb.createPool() como envoltorio, porque ocultaba las credenciales.
   const adapter = new PrismaMariaDb({
-    host: "localhost",
-    port: 3306,
-    user: "root",
-    password: "", // XAMPP no usa contraseña por defecto
-    database: "nfood",
+    host: dbHost,
+    port: Number(dbUrl.port) || 3306,
+    user: dbUrl.username || "root",
+    password: dbUrl.password || "",
+    database: dbUrl.pathname.replace("/", ""),
     connectionLimit: 15,
     connectTimeout: 10000,
   });
