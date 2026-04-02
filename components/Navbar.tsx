@@ -16,12 +16,14 @@ export function Navbar() {
       <div className="container flex h-14 items-center justify-between px-4 mx-auto max-w-7xl">
         <div className="flex items-center gap-4">
           <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
+            <SheetTrigger
+              render={
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              }
+            />
             <SheetContent side="left">
               <SheetHeader>
                 <SheetTitle>nfood</SheetTitle>
@@ -32,19 +34,10 @@ export function Navbar() {
               </div>
             </SheetContent>
           </Sheet>
-          
+
           <Link href="/" className="flex items-center gap-2">
             <span className="font-bold text-xl tracking-tight text-orange-600">nfood</span>
           </Link>
-          
-          <div className="hidden md:flex gap-6 ml-6">
-            <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
-              Menú
-            </Link>
-            <Link href="/track" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
-              Mis Pedidos
-            </Link>
-          </div>
         </div>
 
         <div className="flex items-center gap-2">

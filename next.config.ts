@@ -9,8 +9,8 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  turbopack: {},
-  serverExternalPackages: ["@prisma/client", "prisma"],
+  // Indica a Turbopack que no intente empaquetar estos módulos
+  serverExternalPackages: ["@prisma/client", "prisma", "mariadb"],
   images: {
     remotePatterns: [
       {
