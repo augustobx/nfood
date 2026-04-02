@@ -40,6 +40,7 @@ model Category {
   isActive Boolean   @default(true)
   sequence Int       @default(0)
   products Product[]
+  ingredients IngredientCategory[]
 }
 
 model Product {
@@ -53,18 +54,39 @@ model Product {
   isCombo     Boolean      @default(false)
   
   category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  ingredients Ingredient[]
+  ingredients ProductIngredient[]
   extras      ProductExtra[]
   orderItems  OrderItem[]
 }
 
 model Ingredient {
-  id              String                   @id @default(uuid())
-  productId       String
+  id              String  @id @default(uuid())
   name            String
-  isRemovable     Boolean                  @default(true)
-  product         Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  isActive        Boolean @default(true)
+  
+  categories      IngredientCategory[]
+  products        ProductIngredient[]
   removedInOrders OrderItemRemovedIngredient[]
+}
+
+model IngredientCategory {
+  ingredientId String
+  categoryId   String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([ingredientId, categoryId])
+}
+
+model ProductIngredient {
+  productId    String
+  ingredientId String
+  isRemovable  Boolean @default(true)
+  
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([productId, ingredientId])
 }
 
 model Extra {

@@ -125,22 +125,24 @@ export function ProductDetailsClient({ product }: { product: any }) {
             <h3 className="text-xl font-semibold">Ingredientes</h3>
             <p className="text-sm text-muted-foreground">Destildá los ingredientes que no querés.</p>
             <div className="grid gap-3">
-              {product.ingredients.map((ing: any) => (
+              {product.ingredients.map((prodIng: any) => {
+                const ing = prodIng.ingredient;
+                return (
                 <div key={ing.id} className="flex items-center space-x-2">
                   <Checkbox 
                     id={`ing-${ing.id}`}
                     defaultChecked={true}
-                    disabled={!ing.isRemovable}
+                    disabled={!prodIng.isRemovable}
                     onCheckedChange={(checked) => handleIngredientToggle(ing.id, checked as boolean)}
                   />
                   <Label 
                     htmlFor={`ing-${ing.id}`}
-                    className={`text-base flex-1 cursor-pointer font-normal ${!ing.isRemovable ? "opacity-50" : ""}`}
+                    className={`text-base flex-1 cursor-pointer font-normal ${!prodIng.isRemovable ? "opacity-50" : ""}`}
                   >
-                    {ing.name} {!ing.isRemovable && "(No se puede quitar)"}
+                    {ing.name} {!prodIng.isRemovable && "(No se puede quitar)"}
                   </Label>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}

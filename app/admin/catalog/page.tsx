@@ -7,7 +7,7 @@ export default async function CatalogPage() {
     include: {
       products: {
         include: {
-          ingredients: true,
+          ingredients: { include: { ingredient: true } },
           extras: { include: { extra: true } }
         }
       }
@@ -18,6 +18,11 @@ export default async function CatalogPage() {
     orderBy: { name: 'asc' }
   });
 
+  const allIngredients = await prisma.ingredient.findMany({
+    orderBy: { name: 'asc' },
+    include: { categories: true }
+  });
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in">
       <div>
@@ -25,7 +30,11 @@ export default async function CatalogPage() {
         <p className="text-muted-foreground">Administra tus categorías, productos, ingredientes y extras.</p>
       </div>
 
-      <CatalogClient initialCategories={categories} allExtras={allExtras} />
+      <CatalogClient 
+        initialCategories={categories} 
+        allExtras={allExtras} 
+        allIngredients={allIngredients} 
+      />
     </div>
   );
 }
