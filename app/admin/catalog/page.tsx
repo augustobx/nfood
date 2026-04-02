@@ -8,7 +8,8 @@ export default async function CatalogPage() {
       products: {
         include: {
           ingredients: { include: { ingredient: true } },
-          extras: { include: { extra: true } }
+          extras: { include: { extra: true } },
+          comboItemsConfig: true
         }
       }
     }
@@ -23,6 +24,11 @@ export default async function CatalogPage() {
     include: { categories: true }
   });
 
+  const allCombos = await prisma.product.findMany({
+    where: { isCombo: true },
+    include: { comboItemsConfig: true }
+  });
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in">
       <div>
@@ -34,6 +40,7 @@ export default async function CatalogPage() {
         initialCategories={categories} 
         allExtras={allExtras} 
         allIngredients={allIngredients} 
+        allCombos={allCombos}
       />
     </div>
   );

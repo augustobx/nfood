@@ -13,9 +13,47 @@ model SystemConfig {
   logoUrl         String?
   splashUrl       String?
   backgroundUrl   String?
+  backgroundBlur  Boolean @default(false)
   whatsappMessage String  @default("Hola, tu pedido está en estado: {{estado}}. Gracias por elegirnos!")
   isStoreOpen     Boolean @default(true)
+  closedMessage   String  @default("Lo sentimos, actualmente nuestro local se encuentra cerrado.")
+  
+  primaryColor    String  @default("#f97316") // orange-500
+  secondaryColor  String  @default("#9333ea") // purple-600
+  
+  splashEnabled   Boolean @default(false)
+  splashDuration  Int     @default(3) // seconds
+  
+  welcomeBalloonEnabled  Boolean @default(false)
+  welcomeBalloonText     String  @default("¡Te damos la bienvenida a nuestra PWA!")
+  welcomeBalloonDuration Int     @default(5) // seconds
+  
+  deliveryCost    Float   @default(0)
+  globalDiscount  Float   @default(0) // percentage 0-100
+  
+  paymentCash     Boolean @default(true)
+  paymentMp       Boolean @default(true)
+  autoPrintTickets Boolean @default(true)
+
+  isRouletteActive Boolean @default(false)
+  rouletteCost     Int     @default(100)
+
   updatedAt       DateTime @updatedAt
+}
+
+model RoulettePrize {
+  id              String  @id @default(uuid())
+  name            String
+  probability     Float
+  
+  type            String  // PRODUCT, PERCENT, AMOUNT
+  value           Float?  
+  productId       String? 
+  
+  bgColor         String  @default("#f97316")
+  textColor       String  @default("#ffffff")
+  
+  product         Product? @relation(fields: [productId], references: [id])
 }
 
 model BusinessHour {
@@ -24,6 +62,15 @@ model BusinessHour {
   openTime  String   // HH:mm
   closeTime String   // HH:mm
   isOpen    Boolean  @default(true)
+}
+
+model DeliveryTimeSlot {
+  id        String   @id @default(uuid())
+  time      String   // e.g. "21:00"
+  capacity  Int      // Total initial cupos
+  available Int      // Current real-time available cupos
+  isActive  Boolean  @default(true)
+  sequence  Int      @default(0) // Chronological sorting
 }
 
 model Messenger {
@@ -46,17 +93,30 @@ model Category {
 model Product {
   id          String       @id @default(uuid())
   name        String
-  categoryId  String
+  categoryId  String?
   basePrice   Float
   description String?
   imageUrl    String?
+  showImage   Boolean      @default(true)
   isActive    Boolean      @default(true)
   isCombo     Boolean      @default(false)
   
-  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  allowHalf    Boolean      @default(false)
+  onlyHalf     Boolean      @default(false)
+  
+  points       Int          @default(0)
+  
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   ingredients ProductIngredient[]
   extras      ProductExtra[]
   orderItems  OrderItem[]
+  
+  orderItemsAsSecondHalf OrderItem[] @relation("SecondHalf")
+  comboItemsConfig   ProductComboItem[] @relation("ComboToItems")
+  partOfCombosConfig ProductComboItem[] @relation("ItemToCombo")
+
+  orderItemsAsComboItem OrderItemComboItem[]
+  roulettePrizes        RoulettePrize[]
 }
 
 model Ingredient {
@@ -67,6 +127,7 @@ model Ingredient {
   categories      IngredientCategory[]
   products        ProductIngredient[]
   removedInOrders OrderItemRemovedIngredient[]
+  comboRemovedInOrders OrderItemComboRemovedIngredient[]
 }
 
 model IngredientCategory {
@@ -108,6 +169,16 @@ model ProductExtra {
   @@id([productId, extraId])
 }
 
+model ProductComboItem {
+  id        String  @id @default(uuid())
+  comboId   String
+  productId String
+  quantity  Int     @default(1)
+  
+  combo     Product @relation("ComboToItems", fields: [comboId], references: [id], onDelete: Cascade)
+  product   Product @relation("ItemToCombo", fields: [productId], references: [id], onDelete: Restrict)
+}
+
 model Order {
   id               String   @id @default(uuid())
   clientName       String
@@ -126,6 +197,10 @@ model Order {
   messengerId      String?
   messenger        Messenger? @relation(fields: [messengerId], references: [id])
 
+  clientId         String?
+  client           Client?    @relation(fields: [clientId], references: [id])
+  earnedPoints     Int        @default(0)
+
   items            OrderItem[]
   history          OrderHistory[]
 }
@@ -139,10 +214,36 @@ model OrderItem {
   subtotal        Float
   notes           String?
 
+  isHalfAndHalf        Boolean @default(false)
+  secondHalfProductId  String?
+  secondHalfProduct    Product? @relation("SecondHalf", fields: [secondHalfProductId], references: [id], onDelete: Restrict)
+
   order                 Order                        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product               Product                      @relation(fields: [productId], references: [id], onDelete: Restrict)
   removedIngredients    OrderItemRemovedIngredient[]
   addedExtras           OrderItemExtra[]
+  comboItems            OrderItemComboItem[]
+}
+
+model OrderItemComboItem {
+  id          String @id @default(uuid())
+  orderItemId String
+  productId   String
+  
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  removedIngredients OrderItemComboRemovedIngredient[]
+}
+
+model OrderItemComboRemovedIngredient {
+  comboItemId  String
+  ingredientId String
+  
+  comboItem    OrderItemComboItem @relation(fields: [comboItemId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient         @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@id([comboItemId, ingredientId])
 }
 
 model OrderItemRemovedIngredient {
@@ -173,4 +274,27 @@ model OrderHistory {
   createdAt DateTime @default(now())
   
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  password  String
+  name      String?
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  orders    Order[]
+  sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  clientId  String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }

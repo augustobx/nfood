@@ -6,9 +6,18 @@ export default async function ProductPage({ params }: { params: { id: string } }
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: {
-      ingredients: true,
+      ingredients: { include: { ingredient: true } },
       extras: {
         include: { extra: true }
+      },
+      comboItemsConfig: {
+        include: {
+          product: {
+            include: {
+              ingredients: { include: { ingredient: true } }
+            }
+          }
+        }
       }
     }
   });
@@ -17,9 +26,25 @@ export default async function ProductPage({ params }: { params: { id: string } }
     return notFound();
   }
 
+  // Pre-fetch siblings if it's a Half to build Half-and-Half configurations
+  let halfSiblings: any[] = [];
+  if (product.allowHalf && !product.onlyHalf) {
+    halfSiblings = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: product.id },
+        isActive: true,
+        allowHalf: true
+      },
+      include: {
+        ingredients: { include: { ingredient: true } }
+      }
+    });
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
-      <ProductDetailsClient product={product} />
+      <ProductDetailsClient product={product} halfSiblings={halfSiblings} />
     </div>
   );
 }

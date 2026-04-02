@@ -11,44 +11,61 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ProductDetailsClient({ product }: { product: any }) {
+export function ProductDetailsClient({ product, halfSiblings = [] }: { product: any, halfSiblings?: any[] }) {
   const router = useRouter();
   const { addItem } = useCartStore();
 
-  
   const [quantity, setQuantity] = useState(1);
   const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
   const [addedExtras, setAddedExtras] = useState<any[]>([]);
   const [notes, setNotes] = useState("");
+  
+  const [secondHalf, setSecondHalf] = useState<any>(null);
+  const [comboRemovedIngredients, setComboRemovedIngredients] = useState<Record<string, string[]>>({});
 
   const extrasTotal = addedExtras.reduce((sum, extra) => sum + extra.price, 0);
-  const unitPrice = product.basePrice + extrasTotal;
+  
+  let basePrice = product.basePrice;
+  if (product.allowHalf && secondHalf) {
+    basePrice = (product.basePrice / 2) + (secondHalf.basePrice / 2);
+  }
+  const unitPrice = basePrice + extrasTotal;
   const totalPrice = unitPrice * quantity;
 
   const handleIngredientToggle = (ingredientId: string, checked: boolean) => {
-    if (!checked) {
-      setRemovedIngredients((prev) => [...prev, ingredientId]);
-    } else {
-      setRemovedIngredients((prev) => prev.filter((id) => id !== ingredientId));
-    }
+    if (!checked) setRemovedIngredients((prev) => [...prev, ingredientId]);
+    else setRemovedIngredients((prev) => prev.filter((id) => id !== ingredientId));
   };
 
   const handleExtraToggle = (extra: any, checked: boolean) => {
-    if (checked) {
-      setAddedExtras((prev) => [...prev, extra]);
-    } else {
-      setAddedExtras((prev) => prev.filter((e) => e.id !== extra.id));
-    }
+    if (checked) setAddedExtras((prev) => [...prev, extra]);
+    else setAddedExtras((prev) => prev.filter((e) => e.id !== extra.id));
+  };
+
+  const handleComboIngredientToggle = (comboItemId: string, ingredientId: string, checked: boolean) => {
+    setComboRemovedIngredients(prev => {
+      const current = prev[comboItemId] || [];
+      if (!checked) return { ...prev, [comboItemId]: [...current, ingredientId] };
+      return { ...prev, [comboItemId]: current.filter(id => id !== ingredientId) };
+    });
   };
 
   const handleAddToCart = () => {
+    if (product.allowHalf && !product.onlyHalf && !secondHalf) {
+      toast.error("Debes seleccionar la otra mitad");
+      return;
+    }
+
     addItem({
       product: product,
       quantity,
       removedIngredients,
       addedExtras,
       unitPrice,
-      notes
+      notes,
+      isHalfAndHalf: !!secondHalf,
+      secondHalfProduct: secondHalf,
+      comboRemovedIngredients
     });
 
     toast.success("Agregado al carrito", {
@@ -70,7 +87,7 @@ export function ProductDetailsClient({ product }: { product: any }) {
           <ChevronLeft className="h-6 w-6" />
         </Button>
         
-        {product.imageUrl ? (
+        {product.imageUrl && product.showImage ? (
           <div className="w-full h-64 md:h-96 relative bg-muted">
             <Image 
               src={product.imageUrl} 
@@ -89,7 +106,10 @@ export function ProductDetailsClient({ product }: { product: any }) {
 
       <div className="p-6 md:p-8 space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{product.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            {product.onlyHalf && <span className="text-orange-600 mr-2 uppercase text-sm align-middle font-bold border border-orange-200 bg-orange-50 px-2 py-0.5 rounded-full">Media</span>}
+            {product.allowHalf && secondHalf ? `Mitad ${product.name} / Mitad ${secondHalf.name}` : product.name}
+          </h1>
           <p className="text-muted-foreground text-lg">{product.description}</p>
         </div>
 
@@ -120,10 +140,70 @@ export function ProductDetailsClient({ product }: { product: any }) {
           </div>
         </div>
 
-        {product.ingredients.length > 0 && (
+        {product.allowHalf && !product.onlyHalf && (
           <div className="space-y-4 border-b pb-6">
-            <h3 className="text-xl font-semibold">Ingredientes</h3>
-            <p className="text-sm text-muted-foreground">Destildá los ingredientes que no querés.</p>
+            <h3 className="text-xl font-semibold">Seleccioná la otra mitad</h3>
+            <p className="text-sm text-muted-foreground">Obligatorio para formar la unidad completa.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {halfSiblings.map((sibling) => (
+                <div 
+                  key={sibling.id} 
+                  className={`border rounded-lg p-3 cursor-pointer transition-colors ${secondHalf?.id === sibling.id ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'hover:bg-slate-50'}`}
+                  onClick={() => setSecondHalf(sibling)}
+                >
+                  <div className="font-semibold text-sm">{sibling.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">+${(sibling.basePrice / 2).toLocaleString('es-AR')}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {product.isCombo && product.comboItemsConfig?.length > 0 && (
+          <div className="space-y-4 border-b pb-6">
+            <h3 className="text-xl font-semibold">Personalizá tu Combo</h3>
+            <div className="space-y-4">
+               {product.comboItemsConfig.map((comboItem: any, idx: number) => {
+                 const innerProd = comboItem.product;
+                 return (
+                   <div key={comboItem.id} className="border rounded-lg p-4 bg-slate-50">
+                     <div className="font-semibold text-lg flex items-center justify-between">
+                       <span>{innerProd.name} <span className="text-xs ml-2 bg-slate-200 px-2 py-0.5 rounded-full text-slate-700">Cant: {comboItem.quantity}</span></span>
+                     </div>
+                     {innerProd.ingredients?.length > 0 && (
+                       <div className="mt-3 grid gap-2 pl-2">
+                         {innerProd.ingredients.map((pi:any) => {
+                            const ing = pi.ingredient;
+                            return (
+                              <div key={ing.id} className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id={`ci-${comboItem.id}-ing-${ing.id}`}
+                                  defaultChecked={true}
+                                  disabled={!pi.isRemovable}
+                                  onCheckedChange={(checked) => handleComboIngredientToggle(comboItem.id, ing.id, checked as boolean)}
+                                />
+                                <Label 
+                                  htmlFor={`ci-${comboItem.id}-ing-${ing.id}`}
+                                  className={`text-sm flex-1 cursor-pointer font-normal ${!pi.isRemovable ? "opacity-50" : ""}`}
+                                >
+                                  {ing.name} {!pi.isRemovable && "(No se puede quitar)"}
+                                </Label>
+                              </div>
+                            )
+                         })}
+                       </div>
+                     )}
+                   </div>
+                 )
+               })}
+            </div>
+          </div>
+        )}
+
+        {!product.isCombo && product.ingredients?.length > 0 && (
+          <div className="space-y-4 border-b pb-6">
+            <h3 className="text-xl font-semibold">Ingredientes {secondHalf && "(aplica a toda la unidad)"}</h3>
+            <p className="text-sm text-muted-foreground">Destildá los que no querés.</p>
             <div className="grid gap-3">
               {product.ingredients.map((prodIng: any) => {
                 const ing = prodIng.ingredient;
@@ -176,7 +256,7 @@ export function ProductDetailsClient({ product }: { product: any }) {
         <div className="space-y-4">
           <h3 className="text-xl font-semibold">Aclaraciones</h3>
           <Textarea 
-            placeholder="Escribí acá si tenés alguna aclaración para la cocina..." 
+            placeholder={secondHalf ? "Escribí acá si querés que le quiten algo particular a una de las mitades..." : "Escribí acá si tenés alguna aclaración..."}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="resize-none"

@@ -2,6 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getLoggedClient } from "@/lib/auth";
+
+export async function fetchConfig() {
+  const config = await prisma.systemConfig.findFirst();
+  return config || null;
+}
 
 export async function createOrder(data: any) {
   try {
@@ -15,8 +21,31 @@ export async function createOrder(data: any) {
       total
     } = data;
 
-    // Determine delivery time for now just set it to "ASAP" or what user supplied
-    const deliveryTime = data.deliveryTime || "Lo antes posible";
+    const loggedClient = await getLoggedClient();
+
+    // Calculate points securely
+    const productIds = items.map((i: any) => i.product.id);
+    const dbProducts = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const pointsMap = new Map(dbProducts.map(p => [p.id, p.points]));
+
+    let earnedPoints = 0;
+    for (const item of items) {
+      const p = pointsMap.get(item.product.id) || 0;
+      earnedPoints += (p * item.quantity);
+    }
+
+    // Find the slot by time to decrement it
+    const deliveryTime = data.deliveryTime;
+
+    if (deliveryTime) {
+      const slot = await prisma.deliveryTimeSlot.findFirst({ where: { time: deliveryTime, isActive: true } });
+      if (slot && slot.available > 0) {
+        await prisma.deliveryTimeSlot.update({
+          where: { id: slot.id },
+          data: { available: slot.available - 1 }
+        });
+      }
+    }
     
     // Create the order
     const order = await prisma.order.create({
@@ -30,6 +59,8 @@ export async function createOrder(data: any) {
         total,
         status: "NEW",
         paymentStatus: "PENDING",
+        clientId: loggedClient?.id || null,
+        earnedPoints: earnedPoints,
         items: {
           create: items.map((item: any) => ({
             productId: item.product.id,
@@ -37,6 +68,8 @@ export async function createOrder(data: any) {
             unitPrice: item.unitPrice,
             subtotal: item.subtotal,
             notes: item.notes,
+            isHalfAndHalf: item.isHalfAndHalf || false,
+            secondHalfProductId: item.secondHalfProduct?.id || null,
             removedIngredients: {
               create: item.removedIngredients.map((ingId: string) => ({
                 ingredientId: ingId
@@ -47,7 +80,20 @@ export async function createOrder(data: any) {
                 extraId: extra.id,
                 price: extra.price
               }))
-            }
+            },
+            comboItems: (item.product.isCombo && item.product.comboItemsConfig?.length > 0) ? {
+              create: item.product.comboItemsConfig.map((ci: any) => {
+                const removedInThisItem = item.comboRemovedIngredients?.[ci.id] || [];
+                return {
+                  productId: ci.productId,
+                  removedIngredients: {
+                    create: removedInThisItem.map((ingId: string) => ({
+                      ingredientId: ingId
+                    }))
+                  }
+                };
+              })
+            } : undefined
           }))
         },
         history: {
@@ -57,6 +103,13 @@ export async function createOrder(data: any) {
         }
       }
     });
+
+    if (loggedClient && earnedPoints > 0) {
+      await prisma.client.update({
+        where: { id: loggedClient.id },
+        data: { points: { increment: earnedPoints } }
+      });
+    }
 
     revalidatePath("/admin/live");
 
