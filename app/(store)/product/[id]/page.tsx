@@ -2,9 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ProductDetailsClient } from "./ProductDetailsClient";
 
-export default async function ProductPage({ params }: { params: { id: string } }) {
+// 1. Cambiamos el tipo de params a Promise
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+
+  // 2. Esperamos a que los params lleguen
+  const { id } = await params;
+
   const product = await prisma.product.findUnique({
-    where: { id: params.id },
+    where: { id: id }, // 3. Usamos 'id' directamente
     include: {
       ingredients: { include: { ingredient: true } },
       extras: {
