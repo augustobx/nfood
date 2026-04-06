@@ -162,7 +162,7 @@ export function MetricsClient({ orders, expenses, products }: { orders: any[], e
                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
                      <XAxis dataKey="fechaStr" tickLine={false} tickMargin={10} axisLine={false} style={{ fontSize: '12px' }} />
                      <YAxis tickFormatter={(val) => `$${val / 1000}k`} tickLine={false} axisLine={false} style={{ fontSize: '12px' }} />
-                     <Tooltip formatter={(value: number) => `$${value.toLocaleString('es-AR')}`} labelStyle={{ color: 'black' }} />
+                     <Tooltip formatter={(value: any) => `$${Number(value).toLocaleString('es-AR')}`} labelStyle={{ color: 'black' }} />
                      <Legend />
                      <Line type="monotone" name="Ventas ($)" dataKey="ventas" stroke="#22c55e" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                      <Line type="monotone" name="Gastos ($)" dataKey="gastos" stroke="#f97316" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
