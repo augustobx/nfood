@@ -125,6 +125,12 @@ export default function CheckoutPage() {
         setIsSuccess(true);
         clearCart();
         toast.success("¡Pedido enviado con éxito!", { description: "Cocina ya lo está preparando." });
+        
+        try {
+           const audio = new Audio('https://www.myinstants.com/media/sounds/dinosaur-roar.mp3');
+           audio.play();
+        } catch(err) { console.error("Audio play failed"); }
+
         router.push(`/track/${result.orderId}`);
       } else {
         throw new Error(result.error);

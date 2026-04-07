@@ -23,6 +23,7 @@ export async function upsertProduct(data: {
   id?: string,
   name: string,
   basePrice: number,
+  suggestedCost?: number,
   points: number,
   description: string,
   categoryId?: string | null,
@@ -38,6 +39,7 @@ export async function upsertProduct(data: {
     const payload = {
       name: data.name,
       basePrice: data.basePrice,
+      suggestedCost: data.suggestedCost || 0,
       points: data.points,
       description: data.description,
       categoryId: data.categoryId || undefined,

@@ -7,7 +7,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const routes = [
     { name: "Live Dashboard", href: "/admin/live", icon: LayoutDashboard },
     { name: "Catálogo", href: "/admin/catalog", icon: ShoppingBag },
-    { name: "Bodega y Costos", href: "/admin/costos", icon: PackageOpen },
     { name: "Métricas", href: "/admin/metricas", icon: TrendingUp },
     { name: "Juegos", href: "/admin/games", icon: Dices },
     { name: "Clientes", href: "/admin/users", icon: Users },

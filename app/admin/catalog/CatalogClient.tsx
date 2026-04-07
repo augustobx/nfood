@@ -131,6 +131,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
       ...newProduct,
       id: newProduct.id,
       basePrice: parseFloat(newProduct.basePrice),
+      suggestedCost: calculateRecipeCost(),
       points: parseInt(newProduct.points) || 0,
       isCombo: false,
       comboItemsData: []
@@ -152,6 +153,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
       id: newCombo.id,
       name: newCombo.name,
       basePrice: parseFloat(newCombo.basePrice),
+      suggestedCost: newCombo.comboItemsData.reduce((total, item) => total + ((item.productInfo as any)?.suggestedCost || 0) * item.quantity, 0),
       points: parseInt(newCombo.points) || 0,
       description: newCombo.description,
       imageUrl: newCombo.imageUrl,
