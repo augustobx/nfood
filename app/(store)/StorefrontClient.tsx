@@ -149,7 +149,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
               )}
 
               {/* Ingredients Config */}
-              {!product.isCombo && product.ingredients?.length > 0 && (
+              {!product.isCombo && product.ingredients?.length > 0 && product.allowRemoveIngredients !== false && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Ingredientes </h4>
                   <div className="grid gap-2 bg-white p-3 border rounded-xl">
@@ -175,11 +175,10 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
               )}
 
               {/* Combo Personalization */}
-              {product.isCombo && product.comboItemsConfig?.length > 0 && (
+              {product.isCombo && product.comboItemsConfig?.some((ci:any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false) && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-purple-800 uppercase tracking-tight">Personalizar por dentro</h4>
-                  {product.comboItemsConfig.map((ci: any) => {
-                    if (!ci.product.ingredients?.length) return null;
+                  {product.comboItemsConfig.filter((ci:any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false).map((ci: any) => {
                     return (
                       <div key={ci.id} className="bg-white p-3 border-l-4 border-purple-400 rounded-lg shadow-sm">
                         <span className="font-bold text-xs uppercase text-slate-500 block mb-2">{ci.product.name} (x{ci.quantity})</span>

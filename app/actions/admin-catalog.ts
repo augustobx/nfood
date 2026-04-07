@@ -32,6 +32,7 @@ export async function upsertProduct(data: {
   extraIds: string[],
   allowHalf: boolean,
   onlyHalf: boolean,
+  allowRemoveIngredients: boolean,
   isCombo: boolean,
   comboItemsData: { id: string, quantity: number }[]
 }) {
@@ -46,6 +47,7 @@ export async function upsertProduct(data: {
       imageUrl: data.imageUrl,
       allowHalf: data.allowHalf,
       onlyHalf: data.onlyHalf,
+      allowRemoveIngredients: data.allowRemoveIngredients,
       isCombo: data.isCombo,
     };
 
@@ -152,12 +154,16 @@ export async function toggleIngredient(id: string, isActive: boolean) {
   } catch (error) { return { success: false, error: "Error al actualizar ingrediente" }; }
 }
 
-export async function addExtra(name: string, price: number) {
+export async function upsertExtra(name: string, price: number, id?: string) {
   try {
-    await prisma.extra.create({ data: { name, price, isActive: true } });
+    if (id) {
+       await prisma.extra.update({ where: { id }, data: { name, price } });
+    } else {
+       await prisma.extra.create({ data: { name, price, isActive: true } });
+    }
     revalidatePath("/admin/catalog"); revalidatePath("/");
     return { success: true };
-  } catch (error) { return { success: false, error: "Error al crear extra" }; }
+  } catch (error) { return { success: false, error: "Error al guardar extra" }; }
 }
 
 export async function toggleExtra(id: string, isActive: boolean) {

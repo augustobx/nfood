@@ -17,7 +17,7 @@ import {
   addCategory, toggleCategory, deleteCategory,
   upsertProduct, toggleProduct, toggleProductImage, deleteProduct,
   addIngredient, toggleIngredient, deleteIngredient, restockIngredient,
-  addExtra, toggleExtra, deleteExtra
+  upsertExtra, toggleExtra, deleteExtra
 } from "@/app/actions/admin-catalog";
 
 export function CatalogClient({ initialCategories, allExtras, allIngredients, allCombos = [] }: { initialCategories: any[], allExtras: any[], allIngredients: any[], allCombos?: any[] }) {
@@ -38,7 +38,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
   };
 
   const [newCatName, setNewCatName] = useState("");
-  const [newExtra, setNewExtra] = useState({ name: "", price: "" });
+  const [newExtra, setNewExtra] = useState({ id: undefined as string | undefined, name: "", price: "" });
 
   const [newIngredient, setNewIngredient] = useState({
     name: "", categoryIds: [] as string[],
@@ -51,7 +51,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
     id: undefined as string | undefined,
     name: "", basePrice: "", points: "0", description: "", categoryId: "", imageUrl: "",
     ingredientsData: [] as { id: string, quantity: number }[], extraIds: [] as string[],
-    allowHalf: false, onlyHalf: false,
+    allowHalf: false, onlyHalf: false, allowRemoveIngredients: true,
     isCombo: false, comboItemsData: [] as { id: string, quantity: number }[]
   });
 
@@ -117,9 +117,9 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
   const handleCreateExtra = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newExtra.name || !newExtra.price) return;
-    const res = await addExtra(newExtra.name, parseFloat(newExtra.price));
-    if (res.success) { toast.success("Extra creado"); setNewExtra({ name: "", price: "" }); }
-    else { toast.error("Error al crear extra"); }
+    const res = await upsertExtra(newExtra.name, parseFloat(newExtra.price), newExtra.id);
+    if (res.success) { toast.success("Extra guardado"); setNewExtra({ id: undefined, name: "", price: "" }); }
+    else { toast.error("Error al guardar extra"); }
   };
   const handleToggleExtra = async (id: string, current: boolean) => await toggleExtra(id, !current);
 
@@ -140,7 +140,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
     if (res.success) {
       toast.success("Producto guardado");
       setProductDialogOpen(false);
-      setNewProduct({ id: undefined, name: "", basePrice: "", points: "0", description: "", categoryId: "", imageUrl: "", ingredientsData: [], extraIds: [], allowHalf: false, onlyHalf: false, isCombo: false, comboItemsData: [] });
+      setNewProduct({ id: undefined, name: "", basePrice: "", points: "0", description: "", categoryId: "", imageUrl: "", ingredientsData: [], extraIds: [], allowHalf: false, onlyHalf: false, allowRemoveIngredients: true, isCombo: false, comboItemsData: [] });
     }
     else { toast.error("Error al guardar producto"); }
   };
@@ -161,6 +161,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
       isCombo: true,
       allowHalf: false,
       onlyHalf: false,
+      allowRemoveIngredients: true,
       ingredientsData: [],
       extraIds: [],
       comboItemsData: newCombo.comboItemsData.map(c => ({ id: c.id, quantity: c.quantity }))
@@ -403,7 +404,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
                   <Trash2 className="w-4 h-4" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => {
-                  setNewProduct({ id: undefined, name: "", basePrice: "", points: "0", description: "", categoryId: cat.id, imageUrl: "", ingredientsData: [], extraIds: [], allowHalf: false, onlyHalf: false, isCombo: false, comboItemsData: [] });
+                  setNewProduct({ id: undefined, name: "", basePrice: "", points: "0", description: "", categoryId: cat.id, imageUrl: "", ingredientsData: [], extraIds: [], allowHalf: false, onlyHalf: false, allowRemoveIngredients: true, isCombo: false, comboItemsData: [] });
                   setProductDialogOpen(true);
                 }}><Plus className="w-4 h-4 mr-2" /> Producto</Button>
                 <Dialog open={isProductDialogOpen && newProduct.categoryId === cat.id} onOpenChange={(open) => {
@@ -425,6 +426,10 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
                         <div className="flex items-center space-x-2">
                           <Switch id="sw-only" checked={newProduct.onlyHalf} disabled={!newProduct.allowHalf} onCheckedChange={(v) => setNewProduct({ ...newProduct, onlyHalf: v })} />
                           <Label htmlFor="sw-only" className={`cursor-pointer ${!newProduct.allowHalf ? 'opacity-50' : ''}`}>Modo solo media</Label>
+                        </div>
+                        <div className="flex items-center space-x-2 w-full mt-2">
+                          <Switch id="sw-remove" checked={newProduct.allowRemoveIngredients} onCheckedChange={(v) => setNewProduct({ ...newProduct, allowRemoveIngredients: v })} />
+                          <Label htmlFor="sw-remove" className="cursor-pointer text-slate-700">Permitir al cliente quitar ingredientes de la receta (ej. "Sin Tomate")</Label>
                         </div>
                       </div>
 
@@ -575,7 +580,7 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
                         <div className="flex flex-col items-center gap-1 ml-2">
                           <Button variant="ghost" size="icon" className="text-blue-500 hover:bg-blue-50 h-8 w-8" onClick={() => {
                             setNewProduct({
-                              id: prod.id, name: prod.name, basePrice: prod.basePrice.toString(), points: prod.points.toString(), description: prod.description || "", categoryId: prod.categoryId, imageUrl: prod.imageUrl || "", allowHalf: prod.allowHalf, onlyHalf: prod.onlyHalf, isCombo: false,
+                              id: prod.id, name: prod.name, basePrice: prod.basePrice.toString(), points: prod.points.toString(), description: prod.description || "", categoryId: prod.categoryId, imageUrl: prod.imageUrl || "", allowHalf: prod.allowHalf, onlyHalf: prod.onlyHalf, allowRemoveIngredients: prod.allowRemoveIngredients ?? true, isCombo: false,
                               ingredientsData: prod.ingredients?.map((i: any) => ({ id: i.ingredientId, quantity: i.quantity })) || [], extraIds: prod.extras?.map((e: any) => e.extraId) || [], comboItemsData: []
                             });
                             setProductDialogOpen(true);
@@ -712,14 +717,19 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
           <CardContent className="p-6">
             <form className="flex items-end gap-4" onSubmit={handleCreateExtra}>
               <div className="flex-1 space-y-2">
-                <Label>Nuevo Extra Global</Label>
+                <Label>{newExtra.id ? "Editar Extra" : "Nuevo Extra Global"}</Label>
                 <Input placeholder="Ej. Porción de Papas" value={newExtra.name} onChange={e => setNewExtra({ ...newExtra, name: e.target.value })} required />
               </div>
               <div className="w-32 space-y-2">
                 <Label>Precio (+ $)</Label>
                 <Input type="number" min="0" step="0.01" value={newExtra.price} onChange={e => setNewExtra({ ...newExtra, price: e.target.value })} required />
               </div>
-              <Button type="submit"><Plus className="w-4 h-4 mr-2" /> Agregar Extra</Button>
+              <div className="flex gap-2">
+                {newExtra.id && (
+                   <Button type="button" variant="outline" onClick={() => setNewExtra({ id: undefined, name: "", price: "" })}>Cancelar</Button>
+                )}
+                <Button type="submit"><Plus className="w-4 h-4 mr-2" /> Guardar Extra</Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -741,6 +751,9 @@ export function CatalogClient({ initialCategories, allExtras, allIngredients, al
                       <span className="text-xs text-muted-foreground">{ext.isActive ? 'Activo' : 'Pausado'}</span>
                       <Switch checked={ext.isActive} onCheckedChange={() => handleToggleExtra(ext.id, ext.isActive)} />
                     </div>
+                    <Button variant="ghost" size="icon" className="text-blue-500 hover:bg-blue-50" onClick={() => setNewExtra({ id: ext.id, name: ext.name, price: ext.price.toString() })}>
+                      <Pen className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-50" onClick={() => handleDeleteExtra(ext.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
