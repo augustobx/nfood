@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateConfig, broadcastPushNotification } from "@/app/actions/admin-settings";
-import { Save, Store, Palette, Wallet, Megaphone, Send } from "lucide-react";
+import { Save, Store, Palette, Wallet, Megaphone, Send, Printer, CreditCard } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function SettingsForm({ initialConfig }: { initialConfig: any }) {
   const [cfg, setCfg] = useState(initialConfig);
@@ -50,7 +50,13 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
       backgroundUrl: cfg.backgroundUrl,
       backgroundBlur: cfg.backgroundBlur,
       mpAccessToken: cfg.mpAccessToken,
-      mpPublicKey: cfg.mpPublicKey
+      mpPublicKey: cfg.mpPublicKey,
+
+      // NUEVOS CAMPOS DE IMPRESORAS
+      printerCounterName: cfg.printerCounterName,
+      printerCounterSize: cfg.printerCounterSize || "80mm",
+      printerKitchenName: cfg.printerKitchenName,
+      printerKitchenSize: cfg.printerKitchenSize || "80mm",
     };
 
     const result = await updateConfig(cfg.id, dataToSave);
@@ -94,12 +100,13 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-slate-200">
+        <TabsList className="grid w-full grid-cols-6 bg-slate-200">
           <TabsTrigger value="general"><Store className="w-4 h-4 mr-2" /> Negocio</TabsTrigger>
-          <TabsTrigger value="finance"><Wallet className="w-4 h-4 mr-2" /> Pagos y Envíos</TabsTrigger>
-          <TabsTrigger value="mercadopago"><CreditCard className="w-4 h-4 mr-2" /> Mercado Pago</TabsTrigger>
-          <TabsTrigger value="marketing"><Megaphone className="w-4 h-4 mr-2" /> Splash y Mkt</TabsTrigger>
-          <TabsTrigger value="theme"><Palette className="w-4 h-4 mr-2" /> Branding</TabsTrigger>
+          <TabsTrigger value="finance"><Wallet className="w-4 h-4 mr-2" /> Pagos</TabsTrigger>
+          <TabsTrigger value="mercadopago"><CreditCard className="w-4 h-4 mr-2" /> M. Pago</TabsTrigger>
+          <TabsTrigger value="marketing"><Megaphone className="w-4 h-4 mr-2" /> Splash</TabsTrigger>
+          <TabsTrigger value="theme"><Palette className="w-4 h-4 mr-2" /> Diseño</TabsTrigger>
+          <TabsTrigger value="printers"><Printer className="w-4 h-4 mr-2" /> Impresoras</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4 mt-4">
@@ -140,14 +147,6 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
                 <Label>Mensaje de WhatsApp para notificaciones</Label>
                 <p className="text-xs text-muted-foreground pb-2">Usa {'{{estado}}'} para insertar dinámicamente el estado del pedido.</p>
                 <Textarea value={cfg.whatsappMessage} onChange={e => updateField('whatsappMessage', e.target.value)} />
-              </div>
-
-              <div className="flex items-center justify-between border rounded-lg p-4">
-                <div className="space-y-0.5">
-                  <Label className="font-bold">Auto-Impresión de Tickets</Label>
-                  <p className="text-sm text-muted-foreground">Si tenés un bot de impresión local, se emitirán automáticamente.</p>
-                </div>
-                <Switch checked={cfg.autoPrintTickets} onCheckedChange={v => updateField('autoPrintTickets', v)} />
               </div>
             </CardContent>
           </Card>
@@ -354,6 +353,77 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
                   <Button variant="outline" style={{ borderColor: cfg.secondaryColor, color: cfg.secondaryColor }}>Secundario</Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* PESTAÑA IMPRESORAS */}
+        <TabsContent value="printers" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuración de Impresoras Físicas</CardTitle>
+              <CardDescription>Ajustes para la impresión térmica de comandas (Cocina) y tickets (Mostrador).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+
+              <div className="flex items-center justify-between border-2 border-orange-200 rounded-xl p-4 bg-orange-50">
+                <div className="space-y-0.5">
+                  <Label className="text-base text-slate-800 font-bold">Auto-Impresión de Tickets</Label>
+                  <p className="text-sm text-muted-foreground">Si está activado, la app le dirá a tu servidor local de Node.js que imprima automáticamente cuando ingresa un pedido nuevo.</p>
+                </div>
+                <Switch checked={cfg.autoPrintTickets} onCheckedChange={v => updateField('autoPrintTickets', v)} />
+              </div>
+
+              {/* Impresora Mostrador */}
+              <div className="space-y-4 p-5 border rounded-xl bg-slate-50 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
+                  <Printer className="w-5 h-5 text-blue-600" /> Impresora de Mostrador (Tickets)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de la impresora (OS)</Label>
+                    <Input placeholder="Ej: POS-58C, XP-80C..." value={cfg.printerCounterName || ''} onChange={e => updateField('printerCounterName', e.target.value)} />
+                    <p className="text-xs text-muted-foreground leading-tight">Debe coincidir exactamente con el nombre instalado en Windows/Linux.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ancho del Rollo de Papel</Label>
+                    <Select value={cfg.printerCounterSize || "80mm"} onValueChange={v => updateField('printerCounterSize', v)}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="Seleccionar medida" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="58mm">58mm (Rollos angostos)</SelectItem>
+                        <SelectItem value="80mm">80mm (Rollos estándar de ticketadora)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Impresora Cocina */}
+              <div className="space-y-4 p-5 border rounded-xl bg-slate-50 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800">
+                  <Printer className="w-5 h-5 text-orange-600" /> Impresora de Cocina (Comandas)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de la impresora (OS)</Label>
+                    <Input placeholder="Ej: Cocina-80..." value={cfg.printerKitchenName || ''} onChange={e => updateField('printerKitchenName', e.target.value)} />
+                    <p className="text-xs text-muted-foreground leading-tight">Debe coincidir exactamente con el nombre instalado en Windows/Linux.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ancho del Rollo de Papel</Label>
+                    <Select value={cfg.printerKitchenSize || "80mm"} onValueChange={v => updateField('printerKitchenSize', v)}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="Seleccionar medida" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="58mm">58mm (Rollos angostos)</SelectItem>
+                        <SelectItem value="80mm">80mm (Rollos estándar de ticketadora)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
             </CardContent>
           </Card>
         </TabsContent>

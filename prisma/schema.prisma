@@ -45,6 +45,12 @@ model SystemConfig {
   vapidPrivateKey  String? // Web Push PrivKey
 
   updatedAt       DateTime @updatedAt
+
+  // Configuracion de Impresoras
+  printerCounterName String?  @default("")
+  printerCounterSize String?  @default("80mm")
+  printerKitchenName String?  @default("")
+  printerKitchenSize String?  @default("80mm")
 }
 
 model PushSubscription {
