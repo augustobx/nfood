@@ -17,7 +17,7 @@ export default function CheckoutPage() {
   const addressInputRef = useRef<HTMLInputElement>(null);
 
   const { items, getTotal, clearCart, dailyPrize } = useCartStore();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -29,23 +29,23 @@ export default function CheckoutPage() {
     deliveryTime: "",
     paymentMethod: "CASH",
   });
-  
+
   const [slots, setSlots] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
     fetchConfig().then(cfg => {
-       setConfig(cfg);
-       if (cfg) {
-         if (!cfg.paymentCash && cfg.paymentMp) setFormData(p => ({...p, paymentMethod: "MP"}));
-         if (cfg.paymentCash && !cfg.paymentMp) setFormData(p => ({...p, paymentMethod: "CASH"}));
-       }
+      setConfig(cfg);
+      if (cfg) {
+        if (!cfg.paymentCash && cfg.paymentMp) setFormData(p => ({ ...p, paymentMethod: "MP" }));
+        if (cfg.paymentCash && !cfg.paymentMp) setFormData(p => ({ ...p, paymentMethod: "CASH" }));
+      }
     });
 
     fetch("/api/slots")
       .then(r => r.json())
       .then(d => {
-        const available = d.filter((s:any) => s.available > 0);
+        const available = d.filter((s: any) => s.available > 0);
         setSlots(available);
         if (available.length > 0) {
           setFormData(prev => ({ ...prev, deliveryTime: available[0].time }));
@@ -55,15 +55,15 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     import("@/app/actions/auth").then(({ fetchCurrentClient }) => {
-       fetchCurrentClient().then(client => {
-          if (client) {
-             setFormData(prev => ({
-                ...prev,
-                clientName: client.name || prev.clientName,
-                clientPhone: client.phone || prev.clientPhone
-             }));
-          }
-       });
+      fetchCurrentClient().then(client => {
+        if (client) {
+          setFormData(prev => ({
+            ...prev,
+            clientName: client.name || prev.clientName,
+            clientPhone: client.phone || prev.clientPhone
+          }));
+        }
+      });
     });
   }, []);
 
@@ -78,18 +78,18 @@ export default function CheckoutPage() {
   const subtotal = getTotal();
   const discountMultiplier = 1 - (config?.globalDiscount || 0) / 100;
   let discountedSubtotal = subtotal * discountMultiplier;
-  
+
   let prizeDiscount = 0;
   if (dailyPrize) {
-     if (dailyPrize.type === "PERCENT") {
-         prizeDiscount = discountedSubtotal * (dailyPrize.value / 100);
-     } else if (dailyPrize.type === "AMOUNT") {
-         prizeDiscount = Math.min(discountedSubtotal, dailyPrize.value);
-     }
-     discountedSubtotal -= prizeDiscount;
+    if (dailyPrize.type === "PERCENT") {
+      prizeDiscount = discountedSubtotal * (dailyPrize.value / 100);
+    } else if (dailyPrize.type === "AMOUNT") {
+      prizeDiscount = Math.min(discountedSubtotal, dailyPrize.value);
+    }
+    discountedSubtotal -= prizeDiscount;
   }
-  
-  const deliveryCost = formData.needsDelivery ? (config?.deliveryCost || 0) : 0; 
+
+  const deliveryCost = formData.needsDelivery ? (config?.deliveryCost || 0) : 0;
   const total = discountedSubtotal + deliveryCost;
 
   const validateAndSubmit = async () => {
@@ -97,16 +97,16 @@ export default function CheckoutPage() {
 
     let finalItems = [...items];
     if (dailyPrize?.type === "PRODUCT" && dailyPrize.product) {
-       finalItems.push({
-         id: 'prize',
-         product: dailyPrize.product,
-         quantity: 1,
-         unitPrice: 0,
-         subtotal: 0,
-         notes: "PREMIO DE RULETA",
-         removedIngredients: [],
-         addedExtras: []
-       } as any);
+      finalItems.push({
+        id: 'prize',
+        product: dailyPrize.product,
+        quantity: 1,
+        unitPrice: 0,
+        subtotal: 0,
+        notes: "PREMIO DE RULETA",
+        removedIngredients: [],
+        addedExtras: []
+      } as any);
     }
 
     if (!formData.clientName || !formData.clientPhone) {
@@ -124,27 +124,27 @@ export default function CheckoutPage() {
       const result = await createOrder({ ...formData, items: finalItems, total, baseUrl });
       if (result.success) {
         if (formData.paymentMethod === 'MP') {
-           toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
-           
-           if (result.mpInitPoint) {
-              // NO HACER clearCart() ACA!! Si vaciamos el carrito, React dispara agresivamente
-              // la redirección a "/" antes de que el navegador logre viajar a Mercado Pago.
-              window.location.assign(`/track/${result.orderId}?mp_start=1&mp_url=${encodeURIComponent(result.mpInitPoint)}`);
-           } else {
-              setIsSuccess(true);
-              clearCart();
-              router.push(`/track/${result.orderId}`);
-           }
+          toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
+
+          if (result.mpInitPoint) {
+            // NO HACER clearCart() ACA!! Si vaciamos el carrito, React dispara agresivamente
+            // la redirección a "/" antes de que el navegador logre viajar a Mercado Pago.
+            window.location.assign(`/track/${result.orderId}?mp_start=1&mp_url=${encodeURIComponent(result.mpInitPoint)}`);
+          } else {
+            setIsSuccess(true);
+            clearCart();
+            router.push(`/track/${result.orderId}`);
+          }
         } else {
-           setIsSuccess(true);
-           clearCart();
-           // Efectivo: Mostrar éxito y rugido
-           toast.success("¡Pedido enviado con éxito!", { description: "Cocina ya lo está preparando." });
-           try {
-              const audio = new Audio('https://www.myinstants.com/media/sounds/dinosaur-roar.mp3');
-              audio.play();
-           } catch(err) { console.error("Audio play failed"); }
-           router.push(`/track/${result.orderId}`);
+          setIsSuccess(true);
+          clearCart();
+          // Efectivo: Mostrar éxito y rugido
+          toast.success("¡Pedido enviado con éxito!", { description: "Cocina ya lo está preparando." });
+          try {
+            const audio = new Audio("/sounds/dingdong.mp3");
+            audio.play();
+          } catch (err) { console.error("Audio play failed"); }
+          router.push(`/track/${result.orderId}`);
         }
       } else {
         throw new Error(result.error);
@@ -159,22 +159,22 @@ export default function CheckoutPage() {
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.needsDelivery) {
-        // Show confirm modal
-        setShowConfirmModal(true);
+      // Show confirm modal
+      setShowConfirmModal(true);
     } else {
-        validateAndSubmit();
+      validateAndSubmit();
     }
   };
 
   const confirmNoDelivery = () => {
-      setShowConfirmModal(false);
-      validateAndSubmit();
+    setShowConfirmModal(false);
+    validateAndSubmit();
   };
 
   const cancelNoDelivery = () => {
-      setShowConfirmModal(false);
-      setFormData({...formData, needsDelivery: true});
-      setTimeout(() => addressInputRef.current?.focus(), 300);
+    setShowConfirmModal(false);
+    setFormData({ ...formData, needsDelivery: true });
+    setTimeout(() => addressInputRef.current?.focus(), 300);
   };
 
   if (items.length === 0) return null;
@@ -184,40 +184,40 @@ export default function CheckoutPage() {
       <div className="max-w-xl mx-auto pb-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-           <button type="button" onClick={() => router.back()} className="w-10 h-10 bg-white border outline-none shadow-sm rounded-full flex items-center justify-center active:bg-slate-100 transition-colors">
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
-           </button>
-           <div>
-             <h1 className="text-2xl font-black tracking-tight text-slate-800 leading-none">Datos del pedido</h1>
-           </div>
+          <button type="button" onClick={() => router.back()} className="w-10 h-10 bg-white border outline-none shadow-sm rounded-full flex items-center justify-center active:bg-slate-100 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-800 leading-none">Datos del pedido</h1>
+          </div>
         </div>
 
         <div className="bg-white border sm:rounded-3xl shadow-lg shadow-slate-200/50 p-4 sm:p-6 space-y-6">
           <form onSubmit={handlePreSubmit} className="space-y-4">
-            
+
             <div className="space-y-3">
               <div>
                 <Label htmlFor="name" className="text-slate-700 font-bold text-sm ml-1 mb-1 block">Nombre y Apellido</Label>
-                <Input 
-                  id="name" 
-                  required 
+                <Input
+                  id="name"
+                  required
                   autoFocus
                   className="h-10 rounded-xl bg-slate-50 border-transparent focus:border-orange-500 focus:bg-white transition-colors"
-                  placeholder="Ej. Juan Pérez" 
+                  placeholder="Ej. Juan Pérez"
                   value={formData.clientName}
-                  onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                 />
               </div>
               <div>
                 <Label htmlFor="phone" className="text-slate-700 font-bold text-sm ml-1 mb-1 block">Teléfono (WhatsApp)</Label>
-                <Input 
-                  id="phone" 
+                <Input
+                  id="phone"
                   type="tel"
-                  required 
+                  required
                   className="h-10 rounded-xl bg-slate-50 border-transparent focus:border-orange-500 focus:bg-white transition-colors"
-                  placeholder="Ej. 1123456789" 
+                  placeholder="Ej. 1123456789"
                   value={formData.clientPhone}
-                  onChange={(e) => setFormData({...formData, clientPhone: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
                 />
               </div>
             </div>
@@ -227,45 +227,45 @@ export default function CheckoutPage() {
                 <Label htmlFor="delivery-toggle" className="font-bold cursor-pointer text-slate-800">
                   ¿Necesitás envío?
                 </Label>
-                <Switch 
-                  id="delivery-toggle" 
+                <Switch
+                  id="delivery-toggle"
                   checked={formData.needsDelivery}
-                  onCheckedChange={(c) => setFormData({...formData, needsDelivery: c})}
+                  onCheckedChange={(c) => setFormData({ ...formData, needsDelivery: c })}
                   className="data-[state=checked]:bg-orange-500"
                 />
               </div>
 
               <AnimatePresence>
                 {formData.needsDelivery && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden mt-3"
                   >
                     <Label htmlFor="address" className="text-slate-700 font-bold text-sm ml-1 mb-1 block">Dirección de envío</Label>
-                    <Input 
-                      id="address" 
+                    <Input
+                      id="address"
                       required={formData.needsDelivery}
                       ref={addressInputRef}
                       className="h-10 rounded-xl bg-slate-50 border-transparent focus:border-orange-500 focus:bg-white transition-colors"
-                      placeholder="Calle, Altura, Departamento..." 
+                      placeholder="Calle, Altura, Departamento..."
                       value={formData.deliveryAddress}
-                      onChange={(e) => setFormData({...formData, deliveryAddress: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
                     />
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            
+
             <div className="border-t pt-4 space-y-2">
               <Label className="font-bold text-slate-800 text-sm ml-1">Horario de {formData.needsDelivery ? 'entrega' : 'retiro'}</Label>
               {slots.length > 0 ? (
-                <select 
+                <select
                   required
                   className="h-10 w-full rounded-xl bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white transition-colors px-3 font-medium outline-none text-sm"
                   value={formData.deliveryTime}
-                  onChange={(e) => setFormData({...formData, deliveryTime: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
                 >
                   {slots.map(s => (
                     <option key={s.id} value={s.time}>{s.time} hs (Quedan {s.available} disp.)</option>
@@ -280,14 +280,14 @@ export default function CheckoutPage() {
 
             <div className="border-t pt-4 space-y-2">
               <Label className="font-bold text-slate-800 text-sm ml-1">Método de pago</Label>
-              <select 
-                  required
-                  className="h-10 w-full rounded-xl bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white transition-colors px-3 font-medium outline-none text-sm"
-                  value={formData.paymentMethod}
-                  onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})}
+              <select
+                required
+                className="h-10 w-full rounded-xl bg-slate-50 border border-transparent focus:border-orange-500 focus:bg-white transition-colors px-3 font-medium outline-none text-sm"
+                value={formData.paymentMethod}
+                onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
               >
-                 {config?.paymentCash !== false && <option value="CASH">Efectivo al recibir/retirar</option>}
-                 {config?.paymentMp !== false && <option value="MP">MercadoPago (Transferencia / Link)</option>}
+                {config?.paymentCash !== false && <option value="CASH">Efectivo al recibir/retirar</option>}
+                {config?.paymentMp !== false && <option value="MP">MercadoPago (Transferencia / Link)</option>}
               </select>
             </div>
 
@@ -299,7 +299,7 @@ export default function CheckoutPage() {
               {config?.globalDiscount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold text-xs items-center">
                   <span>Descuento Especial ({config.globalDiscount}%)</span>
-                  <span>-${((subtotal * (config.globalDiscount/100))).toLocaleString('es-AR')}</span>
+                  <span>-${((subtotal * (config.globalDiscount / 100))).toLocaleString('es-AR')}</span>
                 </div>
               )}
               {dailyPrize && dailyPrize.type !== "PRODUCT" && (
@@ -326,8 +326,8 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-14 rounded-2xl text-lg font-bold bg-orange-500 active:bg-orange-600 text-white shadow-lg shadow-orange-500/20 group transition-all"
               disabled={isSubmitting || slots.length === 0}
             >
@@ -342,24 +342,24 @@ export default function CheckoutPage() {
       <AnimatePresence>
         {showConfirmModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-             <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-5"
-             >
-                <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto">
-                   <MapPin className="w-8 h-8" />
-                </div>
-                <div className="text-center">
-                   <h3 className="text-xl font-black text-slate-800 mb-2">¿Sin Envío?</h3>
-                   <p className="text-sm text-slate-500 leading-tight">Estás por finalizar el pedido e indicaste que lo pasás a retirar por el local. ¿Es correcto?</p>
-                </div>
-                <div className="space-y-2 pt-2">
-                   <Button onClick={confirmNoDelivery} className="w-full h-12 rounded-xl bg-orange-500 font-bold text-white">Sí, retiro en local</Button>
-                   <Button onClick={cancelNoDelivery} variant="outline" className="w-full h-12 rounded-xl font-bold border-slate-200">No, quiero pedir envío</Button>
-                </div>
-             </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-5"
+            >
+              <div className="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto">
+                <MapPin className="w-8 h-8" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-black text-slate-800 mb-2">¿Sin Envío?</h3>
+                <p className="text-sm text-slate-500 leading-tight">Estás por finalizar el pedido e indicaste que lo pasás a retirar por el local. ¿Es correcto?</p>
+              </div>
+              <div className="space-y-2 pt-2">
+                <Button onClick={confirmNoDelivery} className="w-full h-12 rounded-xl bg-orange-500 font-bold text-white">Sí, retiro en local</Button>
+                <Button onClick={cancelNoDelivery} variant="outline" className="w-full h-12 rounded-xl font-bold border-slate-200">No, quiero pedir envío</Button>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

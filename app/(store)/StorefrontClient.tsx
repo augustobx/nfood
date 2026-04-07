@@ -175,10 +175,10 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
               )}
 
               {/* Combo Personalization */}
-              {product.isCombo && product.comboItemsConfig?.some((ci:any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false) && (
+              {product.isCombo && product.comboItemsConfig?.some((ci: any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false) && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-purple-800 uppercase tracking-tight">Personalizar por dentro</h4>
-                  {product.comboItemsConfig.filter((ci:any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false).map((ci: any) => {
+                  {product.comboItemsConfig.filter((ci: any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false).map((ci: any) => {
                     return (
                       <div key={ci.id} className="bg-white p-3 border-l-4 border-purple-400 rounded-lg shadow-sm">
                         <span className="font-bold text-xs uppercase text-slate-500 block mb-2">{ci.product.name} (x{ci.quantity})</span>
@@ -301,7 +301,6 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   const [showSplash, setShowSplash] = useState(config?.splashEnabled);
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // CORRECCIÓN SPLASH: Ahora se muestra siempre al recargar la página, se eliminó la restricción de sessionStorage
   useEffect(() => {
     if (config?.splashEnabled) {
       setShowSplash(true);
@@ -314,14 +313,24 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
     }
   }, [config?.splashEnabled, config?.splashDuration]);
 
+  // CORRECCIÓN: El globo de bienvenida ya no se oculta solo y revisa la sesión
   useEffect(() => {
     if (config?.welcomeBalloonEnabled && !showSplash) {
-      setShowWelcome(false);
-      const t1 = setTimeout(() => setShowWelcome(true), 1000);
-      const t2 = setTimeout(() => { setShowWelcome(false); }, ((config.welcomeBalloonDuration || 5) * 1000) + 1000);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
+      const roarAccepted = sessionStorage.getItem("roar_accepted") === "true";
+      if (!roarAccepted) {
+        setShowWelcome(true);
+      }
     }
-  }, [config?.welcomeBalloonEnabled, config?.welcomeBalloonDuration, showSplash]);
+  }, [config?.welcomeBalloonEnabled, showSplash]);
+
+  // CORRECCIÓN: Función que se ejecuta al darle al botón del globo
+  const handleAcceptWelcome = () => {
+    sessionStorage.setItem("roar_accepted", "true");
+    setShowWelcome(false);
+    // Reproducimos el rugido (Asegurate de tener tu archivo /sounds/roar.mp3 subido)
+    const roarAudio = new Audio("/sounds/roar.mp3");
+    roarAudio.play().catch(e => console.log("Audio blocked by browser", e));
+  };
 
   const handleCloseAuth = () => {
     sessionStorage.setItem("nfood_auth_dismissed", "true");
@@ -337,7 +346,6 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
     ? allProds.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(searchTerm.toLowerCase()))
     : [];
 
-  // CORRECCIÓN BACKGROUND: Separación de estilos para variables CSS y estilos de fondo
   const themeVars = {
     '--brand-primary': config?.primaryColor || '#f97316',
     '--brand-secondary': config?.secondaryColor || '#9333ea',
@@ -367,7 +375,6 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   }
 
   return (
-    // CORRECCIÓN: Se aplica el mainBackgroundStyles aquí para forzar la visibilidad del fondo.
     <div className="min-h-screen pb-32" style={mainBackgroundStyles}>
 
       {/* Header Banner */}
@@ -559,22 +566,29 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
         )}
       </AnimatePresence>
 
+      {/* CORRECCIÓN: Globo de bienvenida transformado en Modal Central */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-32 right-4 md:right-auto md:left-1/2 md:-translate-x-1/2 z-[100] max-w-sm w-[calc(100%-2rem)]"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-2xl flex items-start gap-4 border border-slate-700">
-              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
-                <Info className="w-5 h-5 text-brand-primary" />
+            <div className="bg-white p-6 rounded-3xl shadow-2xl max-w-sm w-full border-4 border-orange-200 text-center space-y-5 relative overflow-hidden">
+              <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                <Info className="w-8 h-8 text-orange-600 animate-pulse" />
               </div>
-              <div className="flex-1 pt-1">
-                <p className="font-semibold text-sm leading-tight text-white">{config?.welcomeBalloonText}</p>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">¡Bienvenido!</h3>
+                <p className="text-slate-600 font-medium leading-tight">{config?.welcomeBalloonText}</p>
               </div>
-              <button onClick={() => setShowWelcome(false)} className="text-slate-500 hover:text-white pt-1">✕</button>
+              <Button
+                onClick={handleAcceptWelcome}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black text-lg h-14 rounded-2xl shadow-lg shadow-orange-600/20 transition-all"
+              >
+                Aceptar
+              </Button>
             </div>
           </motion.div>
         )}
