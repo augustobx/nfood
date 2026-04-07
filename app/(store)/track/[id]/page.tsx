@@ -7,7 +7,7 @@ import AutoRefresh from "./AutoRefresh";
 import MPReturnHandler from "./MPReturnHandler";
 import { revalidatePath } from "next/cache";
 
-export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string }> }) {
+export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string, mp_start?: string }> }) {
   const { id } = await props.params;
   const searchParams = await props.searchParams;
   const order = await prisma.order.findUnique({
@@ -28,22 +28,6 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
 
   let isCancelled = order.status === "CANCELLED";
 
-  // MP Check: timeout or user abandon
-  if (order.paymentMethod === "MP" && order.paymentStatus === "PENDING" && !isCancelled) {
-     const elapsedMin = (new Date().getTime() - order.createdAt.getTime()) / 60000;
-     const isAborted = searchParams?.payment === "mp_pending" || searchParams?.status === "failure" || searchParams?.status === "pending";
-     
-     if (elapsedMin > 5 || isAborted) {
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "CANCELLED" }
-        });
-        isCancelled = true;
-        order.status = "CANCELLED";
-        revalidatePath("/admin/live");
-     }
-  }
-
   const statuses = [
     { id: "NEW", label: "Recibido", icon: Package },
     { id: "IN_PROCESS", label: "Preparando", icon: Clock },
@@ -56,7 +40,7 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <AutoRefresh intervalMs={30000} />
-      {searchParams?.status && <MPReturnHandler status={searchParams.status} />}
+      <MPReturnHandler isStart={searchParams?.mp_start === "1"} status={searchParams?.status || undefined} orderId={order.id} />
       
       <div className="text-center space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>

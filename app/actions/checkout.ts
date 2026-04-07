@@ -165,3 +165,20 @@ export async function createOrder(data: any) {
     return { success: false, error: "Error al crear el pedido" };
   }
 }
+
+export async function cancelOrderFromMP(orderId: string) {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (order?.paymentMethod === "MP" && order?.paymentStatus === "PENDING" && order?.status !== "CANCELLED") {
+       await prisma.order.update({
+         where: { id: orderId },
+         data: { status: "CANCELLED" }
+       });
+       revalidatePath("/admin/live");
+       return { success: true };
+    }
+    return { success: false, reason: "NOT_ELIGIBLE" };
+  } catch (error) {
+    return { success: false };
+  }
+}
