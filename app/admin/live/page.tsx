@@ -79,6 +79,9 @@ export default function LiveDashboardPage() {
 
   const playAlert = () => {
     if (!audioCtxRef.current) return;
+    if (audioCtxRef.current.state === 'suspended') {
+       audioCtxRef.current.resume();
+    }
     const osc = audioCtxRef.current.createOscillator();
     const gainNode = audioCtxRef.current.createGain();
 
@@ -138,6 +141,11 @@ export default function LiveDashboardPage() {
     { id: "DELIVERED", title: "Entregados", color: "bg-gray-100 border-gray-200" }
   ];
 
+  const todaysOrders = orders.filter(o => o.status !== "CANCELLED");
+  const cashTotal = todaysOrders.filter(o => o.paymentMethod === "CASH" || o.paymentMethod === "EFVO").reduce((acc, o) => acc + (o.total || 0), 0);
+  const mpTotal = todaysOrders.filter(o => o.paymentMethod === "MP").reduce((acc, o) => acc + (o.total || 0), 0);
+  const orderCount = todaysOrders.length;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -161,8 +169,22 @@ export default function LiveDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-start">
+        {/* Stat Cards */}
+        <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-green-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-xs font-bold text-slate-500 uppercase">Efectivo Hoy</span>
+            <span className="text-2xl font-black text-green-600">${cashTotal.toLocaleString('es-AR')}</span>
+        </div>
+        <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-xs font-bold text-slate-500 uppercase">Mercado Pago Hoy</span>
+            <span className="text-2xl font-black text-blue-600">${mpTotal.toLocaleString('es-AR')}</span>
+        </div>
+        <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+            <span className="text-xs font-bold text-slate-500 uppercase">Pedidos Hoy</span>
+            <span className="text-2xl font-black text-slate-800">{orderCount}</span>
+        </div>
+
         {/* Cupos Strip */}
-        <div className="col-span-1 md:col-span-2 xl:col-span-5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-3 flex flex-col md:flex-row gap-4 items-center overflow-x-auto shadow-sm">
+        <div className="col-span-1 md:col-span-2 xl:col-span-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-3 flex flex-col md:flex-row gap-4 items-center overflow-x-auto shadow-sm">
           <div className="font-black whitespace-nowrap text-purple-800 flex items-center gap-2">
             <Clock className="w-5 h-5" /> CUPOS HORARIOS
           </div>
@@ -267,7 +289,7 @@ export default function LiveDashboardPage() {
                                   <SelectTrigger className="w-[120px] h-8 text-[10px] bg-slate-50 border-slate-200"><SelectValue placeholder="Repartidor" /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="none">Nadie</SelectItem>
-                                    {messengers.filter(m => m.isActive).map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                                    {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
                                   </SelectContent>
                                 </Select>
                                 <Button size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 font-bold text-white h-8" onClick={() => handleStatusChange(order.id, "PENDING_DELIVERY")}>A Reparto</Button>
@@ -289,7 +311,7 @@ export default function LiveDashboardPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Nadie</SelectItem>
-                              {messengers.filter(m => m.isActive).map(m => (
+                              {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (
                                 <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                               ))}
                             </SelectContent>
