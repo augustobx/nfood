@@ -174,6 +174,14 @@ export async function cancelOrderFromMP(orderId: string) {
          where: { id: orderId },
          data: { status: "CANCELLED" }
        });
+       
+       if (order.clientId && order.earnedPoints > 0) {
+         await prisma.client.update({
+           where: { id: order.clientId },
+           data: { points: { decrement: order.earnedPoints } }
+         });
+       }
+       
        revalidatePath("/admin/live");
        return { success: true };
     }

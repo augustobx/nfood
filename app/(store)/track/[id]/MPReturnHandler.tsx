@@ -15,12 +15,9 @@ export default function MPReturnHandler({ status, orderId, mpStart, mpUrl }: { s
 
       // 1. MP SUCCESS FLIGHT
       if (status === "approved" || status === "success") {
-        const memoryWasCleaned = !sessionStorage.getItem(memoryKey);
-        if (!memoryWasCleaned) {
-           sessionStorage.removeItem(memoryKey);
-           clearCart();
-           setShowSuccessOverlay(true);
-        }
+        sessionStorage.removeItem(memoryKey); // safely clean it up
+        clearCart();
+        setShowSuccessOverlay(true);
         return;
       }
 

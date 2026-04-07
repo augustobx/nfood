@@ -81,6 +81,13 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
         }
       }
     });
+
+    if (newStatus === "CANCELLED" && currentOrder && currentOrder.clientId && currentOrder.earnedPoints > 0) {
+       await prisma.client.update({
+          where: { id: currentOrder.clientId },
+          data: { points: { decrement: currentOrder.earnedPoints } }
+       });
+    }
     
     revalidatePath("/admin/live");
     revalidatePath(`/track/${order.id}`);
