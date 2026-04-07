@@ -80,7 +80,7 @@ export default function LiveDashboardPage() {
   const playAlert = () => {
     if (!audioCtxRef.current) return;
     if (audioCtxRef.current.state === 'suspended') {
-       audioCtxRef.current.resume();
+      audioCtxRef.current.resume();
     }
     const osc = audioCtxRef.current.createOscillator();
     const gainNode = audioCtxRef.current.createGain();
@@ -123,7 +123,6 @@ export default function LiveDashboardPage() {
       toast.success("Enviado. Redirigiendo a WhatsApp...");
       const cadete = messengers.find(m => m.id === messengerId);
       const phone = cadete?.phone.replace(/\D/g, '') || "";
-      // CORRECCIÓN: Se agregó el fallback || "" para evitar el error de undefined
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(result.text || "")}`;
       window.open(url, "_blank");
 
@@ -145,6 +144,122 @@ export default function LiveDashboardPage() {
   const cashTotal = todaysOrders.filter(o => o.paymentMethod === "CASH" || o.paymentMethod === "EFVO").reduce((acc, o) => acc + (o.total || 0), 0);
   const mpTotal = todaysOrders.filter(o => o.paymentMethod === "MP").reduce((acc, o) => acc + (o.total || 0), 0);
   const orderCount = todaysOrders.length;
+
+  // Helper para renderizar la tarjeta del pedido
+  const renderOrderCard = (order: any, colId: string, isExpanded: boolean) => {
+    const isDelivery = order.needsDelivery;
+    return (
+      <Card key={order.id} className="shadow-sm border-l-4 rounded-xl overflow-hidden" style={{ borderLeftColor: isDelivery ? '#f97316' : '#3b82f6' }}>
+        <div className="p-3 select-none flex flex-col gap-3 bg-white">
+          <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleOrder(order.id)}>
+            <div className="leading-none space-y-1">
+              <div className="font-black text-lg text-slate-800 tracking-tight flex items-center gap-2">
+                #{order.id.slice(-5).toUpperCase()}
+                {isDelivery ? <Truck className="w-4 h-4 text-orange-500" /> : <MapPin className="w-4 h-4 text-blue-500" />}
+              </div>
+              <div className="text-xs font-bold text-slate-500 line-clamp-1">{order.clientName}</div>
+            </div>
+            <div className="flex gap-1 items-center">
+              {order.paymentMethod === 'MP' ? (
+                order.paymentStatus === 'PAID' ?
+                  <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] px-1 pointer-events-none">MP: OK</Badge> :
+                  <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px] px-1 pointer-events-none">MP: PEND</Badge>
+              ) : (
+                <Badge className="bg-slate-100 text-slate-700 border-slate-300 text-[10px] px-1 pointer-events-none">EFVO</Badge>
+              )}
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-black hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); window.open(`/admin/live/print/${order.id}`, '_blank', 'width=300,height=500'); }}>
+                <Printer className="w-4 h-4" />
+              </Button>
+              <div className="p-1 rounded-md text-slate-400">
+                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </div>
+            </div>
+          </div>
+
+          {colId === "NEW" && (
+            <div className="flex flex-col gap-2 relative">
+              {order.paymentMethod === 'MP' && order.paymentStatus === 'PENDING' && (
+                <div className="absolute inset-0 bg-yellow-400/90 z-10 flex flex-col items-center justify-center rounded-lg border-2 border-yellow-500 backdrop-blur-sm p-2 text-center shadow-lg">
+                  <AlertCircle className="w-6 h-6 text-yellow-900 mb-1" />
+                  <span className="font-black text-yellow-900 leading-tight text-xs uppercase">Pago MP Pendiente</span>
+                  <span className="text-[10px] text-yellow-800 font-bold leading-none mt-1">Esperando validación</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold" onClick={() => handleStatusChange(order.id, "CANCELLED")}><Trash2 className="w-3 h-3 mr-1" /> Rechazar</Button>
+                <Button size="sm" className="flex-1 bg-yellow-500 hover:bg-yellow-600 font-bold text-white shadow-sm" onClick={() => handleStatusChange(order.id, "IN_PROCESS")}>Cocinar</Button>
+              </div>
+            </div>
+          )}
+
+          {colId === "IN_PROCESS" && (
+            <div className="space-y-2">
+              {isDelivery ? (
+                <div className="flex gap-2">
+                  <Select value={order.messengerId || "none"} onValueChange={v => handleMessengerChange(order.id, v)}>
+                    <SelectTrigger className="w-[120px] h-8 text-[10px] bg-slate-50 border-slate-200"><SelectValue placeholder="Repartidor" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nadie</SelectItem>
+                      {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 font-bold text-white h-8" onClick={() => handleStatusChange(order.id, "PENDING_DELIVERY")}>A Reparto</Button>
+                </div>
+              ) : (
+                <Button size="sm" className="w-full bg-green-500 hover:bg-green-600 font-bold text-white" onClick={() => handleStatusChange(order.id, "FINISHED")}>Terminado (Retira)</Button>
+              )}
+            </div>
+          )}
+
+          {colId === "FINISHED" && (
+            <Button size="sm" variant="outline" className="w-full border-green-500 text-green-700 bg-green-50 font-bold hover:bg-green-600 hover:text-white" onClick={() => handleStatusChange(order.id, "DELIVERED")}><CheckCircle className="w-4 h-4 mr-1" /> Retirado ✅</Button>
+          )}
+
+          {colId === "PENDING_DELIVERY" && order.messengerId === null && (
+            <Select value={order.messengerId !== null ? order.messengerId : "none"} onValueChange={(v) => handleMessengerChange(order.id, v)}>
+              <SelectTrigger className="w-full h-8 text-xs font-bold border-red-300 bg-red-50 text-red-700">
+                <SelectValue placeholder="Urgente: Asignar Repartidor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nadie</SelectItem>
+                {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (
+                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-slate-100 bg-slate-50">
+              <div className="p-4 text-sm space-y-4">
+                <div className="space-y-1">
+                  <div className="flex gap-2 items-center text-slate-600">
+                    <Phone className="w-3 h-3" /><a href={`https://wa.me/${order.clientPhone.replace(/\D/g, '')}`} target="_blank" className="font-bold underline text-blue-600">{order.clientPhone}</a>
+                  </div>
+                  {isDelivery && <div className="flex gap-2 items-center text-slate-800 font-medium bg-orange-100/50 p-1.5 rounded"><Navigation className="w-3 h-3 text-orange-600" /> <span className="leading-tight">{order.deliveryAddress}</span></div>}
+                  <div className="text-xs font-bold text-slate-500 pt-1 border-t mt-2">Día/Hora: {order.deliveryTime} • Via: {order.paymentMethod}</div>
+                </div>
+
+                <div className="space-y-2">
+                  {order.items.map((item: any) => (
+                    <div key={item.id} className="bg-white border p-2 rounded-md leading-snug">
+                      <div className="font-black text-xs text-slate-800">{item.quantity}x {item.product.name}</div>
+                      {item.addedExtras?.length > 0 && <div className="text-[10px] text-green-700 font-medium">+{item.addedExtras.map((ex: any) => ex.extra.name).join(', ')}</div>}
+                      {item.removedIngredients?.length > 0 && <div className="text-[10px] text-red-600 font-medium">-Sin {item.removedIngredients.map((ing: any) => ing.ingredient.name).join(', ')}</div>}
+                      {item.notes && <div className="text-[10px] italic text-slate-500 mt-1">"{item.notes}"</div>}
+                    </div>
+                  ))}
+                  <div className="font-black text-right pr-2">Total: ${order.total.toLocaleString("es-AR")}</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -171,16 +286,16 @@ export default function LiveDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-start">
         {/* Stat Cards */}
         <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-green-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-xs font-bold text-slate-500 uppercase">Efectivo Hoy</span>
-            <span className="text-2xl font-black text-green-600">${cashTotal.toLocaleString('es-AR')}</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">Efectivo Hoy</span>
+          <span className="text-2xl font-black text-green-600">${cashTotal.toLocaleString('es-AR')}</span>
         </div>
         <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-xs font-bold text-slate-500 uppercase">Mercado Pago Hoy</span>
-            <span className="text-2xl font-black text-blue-600">${mpTotal.toLocaleString('es-AR')}</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">Mercado Pago Hoy</span>
+          <span className="text-2xl font-black text-blue-600">${mpTotal.toLocaleString('es-AR')}</span>
         </div>
         <div className="col-span-1 md:col-span-2 xl:col-span-1 bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-            <span className="text-xs font-bold text-slate-500 uppercase">Pedidos Hoy</span>
-            <span className="text-2xl font-black text-slate-800">{orderCount}</span>
+          <span className="text-xs font-bold text-slate-500 uppercase">Pedidos Hoy</span>
+          <span className="text-2xl font-black text-slate-800">{orderCount}</span>
         </div>
 
         {/* Cupos Strip */}
@@ -233,122 +348,31 @@ export default function LiveDashboardPage() {
               })}
 
               <div className="flex flex-col gap-3">
-                {colOrders.map(order => {
-                  const isExpanded = expandedOrders[order.id] || false;
-                  const isDelivery = order.needsDelivery;
-                  return (
-                    <Card key={order.id} className="shadow-sm border-l-4 rounded-xl overflow-hidden" style={{ borderLeftColor: isDelivery ? '#f97316' : '#3b82f6' }}>
-
-                      <div className="p-3 select-none flex flex-col gap-3 bg-white">
-                        <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleOrder(order.id)}>
-                          <div className="leading-none space-y-1">
-                            <div className="font-black text-lg text-slate-800 tracking-tight flex items-center gap-2">
-                              #{order.id.slice(-5).toUpperCase()}
-                              {isDelivery ? <Truck className="w-4 h-4 text-orange-500" /> : <MapPin className="w-4 h-4 text-blue-500" />}
-                            </div>
-                            <div className="text-xs font-bold text-slate-500 line-clamp-1">{order.clientName}</div>
-                          </div>
-                          <div className="flex gap-1 items-center">
-                            {order.paymentMethod === 'MP' ? (
-                              order.paymentStatus === 'PAID' ? 
-                                <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] px-1 pointer-events-none">MP: OK</Badge> : 
-                                <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px] px-1 pointer-events-none">MP: PEND</Badge>
-                            ) : (
-                                <Badge className="bg-slate-100 text-slate-700 border-slate-300 text-[10px] px-1 pointer-events-none">EFVO</Badge>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-black hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); window.open(`/admin/live/print/${order.id}`, '_blank', 'width=300,height=500'); }}>
-                              <Printer className="w-4 h-4" />
-                            </Button>
-                            <div className="p-1 rounded-md text-slate-400">
-                              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                            </div>
-                          </div>
+                {col.id === "NEW" ? (
+                  // Lógica de Agrupación por Horario para la columna "Nuevos"
+                  Object.entries(
+                    colOrders.reduce((acc: any, order: any) => {
+                      const t = order.deliveryTime || "Sin horario / ASAP";
+                      if (!acc[t]) acc[t] = [];
+                      acc[t].push(order);
+                      return acc;
+                    }, {})
+                  )
+                    .sort((a: any, b: any) => a[0].localeCompare(b[0]))
+                    .map(([time, ordersForTime]: any) => (
+                      <div key={time} className="space-y-3">
+                        <div className="flex items-center gap-2 mt-2 px-1">
+                          <Clock className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm font-bold text-slate-600">{time}</span>
+                          <div className="h-px bg-slate-200 flex-1"></div>
                         </div>
-
-                        {col.id === "NEW" && (
-                          <div className="flex flex-col gap-2 relative">
-                             {order.paymentMethod === 'MP' && order.paymentStatus === 'PENDING' && (
-                               <div className="absolute inset-0 bg-yellow-400/90 z-10 flex flex-col items-center justify-center rounded-lg border-2 border-yellow-500 backdrop-blur-sm p-2 text-center shadow-lg">
-                                 <AlertCircle className="w-6 h-6 text-yellow-900 mb-1" />
-                                 <span className="font-black text-yellow-900 leading-tight text-xs uppercase">Pago MP Pendiente</span>
-                                 <span className="text-[10px] text-yellow-800 font-bold leading-none mt-1">Esperando validación</span>
-                               </div>
-                             )}
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold" onClick={() => handleStatusChange(order.id, "CANCELLED")}><Trash2 className="w-3 h-3 mr-1" /> Rechazar</Button>
-                              <Button size="sm" className="flex-1 bg-yellow-500 hover:bg-yellow-600 font-bold text-white shadow-sm" onClick={() => handleStatusChange(order.id, "IN_PROCESS")}>Cocinar</Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {col.id === "IN_PROCESS" && (
-                          <div className="space-y-2">
-                            {isDelivery ? (
-                              <div className="flex gap-2">
-                                <Select value={order.messengerId || "none"} onValueChange={v => handleMessengerChange(order.id, v)}>
-                                  <SelectTrigger className="w-[120px] h-8 text-[10px] bg-slate-50 border-slate-200"><SelectValue placeholder="Repartidor" /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">Nadie</SelectItem>
-                                    {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
-                                  </SelectContent>
-                                </Select>
-                                <Button size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 font-bold text-white h-8" onClick={() => handleStatusChange(order.id, "PENDING_DELIVERY")}>A Reparto</Button>
-                              </div>
-                            ) : (
-                              <Button size="sm" className="w-full bg-green-500 hover:bg-green-600 font-bold text-white" onClick={() => handleStatusChange(order.id, "FINISHED")}>Terminado (Retira)</Button>
-                            )}
-                          </div>
-                        )}
-
-                        {col.id === "FINISHED" && (
-                          <Button size="sm" variant="outline" className="w-full border-green-500 text-green-700 bg-green-50 font-bold hover:bg-green-600 hover:text-white" onClick={() => handleStatusChange(order.id, "DELIVERED")}><CheckCircle className="w-4 h-4 mr-1" /> Retirado ✅</Button>
-                        )}
-
-                        {col.id === "PENDING_DELIVERY" && order.messengerId === null && (
-                          <Select value={order.messengerId !== null ? order.messengerId : "none"} onValueChange={(v) => handleMessengerChange(order.id, v)}>
-                            <SelectTrigger className="w-full h-8 text-xs font-bold border-red-300 bg-red-50 text-red-700">
-                              <SelectValue placeholder="Urgente: Asignar Repartidor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nadie</SelectItem>
-                              {messengers.filter(m => m.isActive || m.id === order.messengerId).map(m => (
-                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        {ordersForTime.map((order: any) => renderOrderCard(order, col.id, expandedOrders[order.id] || false))}
                       </div>
-
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-slate-100 bg-slate-50">
-                            <div className="p-4 text-sm space-y-4">
-                              <div className="space-y-1">
-                                <div className="flex gap-2 items-center text-slate-600">
-                                  <Phone className="w-3 h-3" /><a href={`https://wa.me/${order.clientPhone.replace(/\D/g, '')}`} target="_blank" className="font-bold underline text-blue-600">{order.clientPhone}</a>
-                                </div>
-                                {isDelivery && <div className="flex gap-2 items-center text-slate-800 font-medium bg-orange-100/50 p-1.5 rounded"><Navigation className="w-3 h-3 text-orange-600" /> <span className="leading-tight">{order.deliveryAddress}</span></div>}
-                                <div className="text-xs font-bold text-slate-500 pt-1 border-t mt-2">Día/Hora: {order.deliveryTime} • Via: {order.paymentMethod}</div>
-                              </div>
-
-                              <div className="space-y-2">
-                                {order.items.map((item: any) => (
-                                  <div key={item.id} className="bg-white border p-2 rounded-md leading-snug">
-                                    <div className="font-black text-xs text-slate-800">{item.quantity}x {item.product.name}</div>
-                                    {item.addedExtras?.length > 0 && <div className="text-[10px] text-green-700 font-medium">+{item.addedExtras.map((ex: any) => ex.extra.name).join(', ')}</div>}
-                                    {item.removedIngredients?.length > 0 && <div className="text-[10px] text-red-600 font-medium">-Sin {item.removedIngredients.map((ing: any) => ing.ingredient.name).join(', ')}</div>}
-                                    {item.notes && <div className="text-[10px] italic text-slate-500 mt-1">"{item.notes}"</div>}
-                                  </div>
-                                ))}
-                                <div className="font-black text-right pr-2">Total: ${order.total.toLocaleString("es-AR")}</div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </Card>
-                  );
-                })}
+                    ))
+                ) : (
+                  // Lógica normal para el resto de las columnas
+                  colOrders.map(order => renderOrderCard(order, col.id, expandedOrders[order.id] || false))
+                )}
               </div>
             </div>
           );
