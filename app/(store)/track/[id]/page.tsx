@@ -7,7 +7,7 @@ import AutoRefresh from "./AutoRefresh";
 import MPReturnHandler from "./MPReturnHandler";
 import { revalidatePath } from "next/cache";
 
-export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string, mp_start?: string }> }) {
+export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string, mp_start?: string, mp_url?: string }> }) {
   const { id } = await props.params;
   const searchParams = await props.searchParams;
   const order = await prisma.order.findUnique({
@@ -40,7 +40,7 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <AutoRefresh intervalMs={30000} />
-      <MPReturnHandler status={searchParams?.status || undefined} orderId={order.id} />
+      <MPReturnHandler mpStart={searchParams?.mp_start} mpUrl={searchParams?.mp_url} status={searchParams?.status || undefined} orderId={order.id} />
       
       <div className="text-center space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>

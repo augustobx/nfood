@@ -4,39 +4,48 @@ import { toast } from "sonner";
 import { cancelOrderFromMP } from "@/app/actions/checkout";
 import { useCartStore } from "@/lib/store";
 
-export default function MPReturnHandler({ status, orderId }: { status?: string, orderId: string }) {
+export default function MPReturnHandler({ status, orderId, mpStart, mpUrl }: { status?: string, orderId: string, mpStart?: string, mpUrl?: string }) {
   const clearCart = useCartStore(state => state.clearCart);
 
   useEffect(() => {
     const handleMP = async () => {
-      const memoryKey = `mp_checkout_${orderId}`;
-      const isApproved = status === "approved" || status === "success";
+      const memoryKey = `mp_jump_${orderId}`;
 
-      if (isApproved) {
-        // Successful payment, let's play sound and clear memory
+      // 1. MP SUCCESS FLIGHT
+      if (status === "approved" || status === "success") {
         sessionStorage.removeItem(memoryKey);
         clearCart();
-        toast.success("¡Pago Confirmado!", { description: "Mercado Pago ha validado el pago con éxito. ¡Gracias!" });
-        try {
-          const audio = new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3");
-          audio.play();
-        } catch (err) {
-          console.error("Audio block", err);
-        }
-      } else {
-        // Not approved. Either they arrived directly (e.g. tracking link) 
-        // OR they just hit "Back" from MP (the memoryKey is still alive).
-        if (sessionStorage.getItem(memoryKey)) {
-           // They came back from MP uncompleted!
-           sessionStorage.removeItem(memoryKey);
-           toast.error("Pago Cancelado", { description: "Has salido de Mercado Pago o no pudimos validar el pago en tiempo real." });
-           await cancelOrderFromMP(orderId);
-           window.location.reload();
-        }
+        toast.success("¡Pago Confirmado!", { description: "Mercado Pago ha validado el pago." });
+        try { new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3").play(); } catch(e){}
+        return;
+      }
+
+      // 2. MP INIT JUMP
+      if (mpStart === "1" && mpUrl) {
+         if (!sessionStorage.getItem(memoryKey)) {
+             // We haven't jumped yet. Jump now!
+             sessionStorage.setItem(memoryKey, "1");
+             window.location.assign(mpUrl);
+         } else {
+             // We HAVE jumped. So hitting this again means the user pressed "Back" from Mercado Pago!
+             sessionStorage.removeItem(memoryKey);
+             toast.error("Pago Cancelado", { description: "Regresaste sin completar el pago." });
+             await cancelOrderFromMP(orderId);
+             window.location.href = `/track/${orderId}`; // Clean URL
+         }
+         return;
+      }
+
+      // 3. User landed here randomly or came from failure back_url without mpStart
+      if (sessionStorage.getItem(memoryKey)) {
+          sessionStorage.removeItem(memoryKey);
+          toast.error("Pago Cancelado", { description: "Pago no completado." });
+          await cancelOrderFromMP(orderId);
+          window.location.reload();
       }
     };
     
     handleMP();
-  }, [status, orderId]);
+  }, [status, orderId, mpStart, mpUrl, clearCart]);
   return null;
 }

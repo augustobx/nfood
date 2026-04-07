@@ -127,9 +127,8 @@ export default function CheckoutPage() {
            toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
            
            if (result.mpInitPoint) {
-              sessionStorage.setItem(`mp_checkout_${result.orderId}`, "true");
-              window.history.replaceState(null, "", `/track/${result.orderId}`);
-              window.location.href = result.mpInitPoint;
+              clearCart();
+              window.location.assign(`/track/${result.orderId}?mp_start=1&mp_url=${encodeURIComponent(result.mpInitPoint)}`);
            } else {
               setIsSuccess(true);
               clearCart();
