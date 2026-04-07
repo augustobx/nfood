@@ -143,7 +143,10 @@ export function CostsClient({ initialSupplies, initialProductions }: { initialSu
                     </div>
                     <div className="space-y-2">
                       <Label className="text-slate-500 flex items-center gap-1">
-                        Unidad de medida <Info className="w-3 h-3 text-blue-500" title="Cómo lo vas a pesar/contar al usarlo en la cocina." />
+                        Unidad de medida
+                        <span title="Cómo lo vas a pesar/contar al usarlo en la cocina.">
+                          <Info className="w-3 h-3 text-blue-500 cursor-help" />
+                        </span>
                       </Label>
                       <Input
                         value={supplyForm.purchaseUnit}
@@ -338,7 +341,10 @@ export function CostsClient({ initialSupplies, initialProductions }: { initialSu
 
                 <div className="space-y-2">
                   <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    Rinde final <Info className="w-3 h-3 text-blue-500" title="Cuántas porciones o unidades te salen con la receta que vas a armar abajo." />
+                    Rinde final
+                    <span title="Cuántas porciones o unidades te salen con la receta que vas a armar abajo.">
+                      <Info className="w-3 h-3 text-blue-500 cursor-help" />
+                    </span>
                   </Label>
                   <div className="flex gap-2">
                     <Input
