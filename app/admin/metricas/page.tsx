@@ -26,6 +26,18 @@ export default async function MetricsPage() {
      }),
      prisma.product.findMany({
        where: { isActive: true },
+       include: {
+         ingredients: true,
+         comboItemsConfig: {
+            include: {
+               product: {
+                  include: {
+                     ingredients: true
+                  }
+               }
+            }
+         }
+       },
        orderBy: { name: 'asc' }
      }),
      prisma.ingredient.findMany({

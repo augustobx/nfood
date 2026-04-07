@@ -29,46 +29,6 @@ export function MetricsClient({ orders, products, ingredients }: { orders: any[]
           usageMap[i.id] = { id: i.id, name: i.name, stock: i.stock, consumed: 0, cost: i.costPerUnit || 0 };
       });
 
-      let tRevenue = 0;
-      let tExpenses = 0;
-      fOrders.forEach(o => {
-         tRevenue += o.total;
-         o.items?.forEach((item: any) => {
-            tExpenses += (item.product?.suggestedCost || 0) * item.quantity;
-            
-            // Calculate detailed ingredient usage
-            const removedIngIds = item.removedIngredients?.map((r:any) => r.ingredientId) || [];
-            
-            if (item.product?.isCombo && item.comboItems) {
-               for (const ci of item.comboItems) {
-                  const ciRemovedIds = ci.removedIngredients?.map((r:any) => r.ingredientId) || [];
-                  for (const ing of ci.product.ingredients || []) {
-                     if (!ciRemovedIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
-                        usageMap[ing.ingredientId].consumed += ing.quantity * item.quantity;
-                     }
-                  }
-               }
-            } else if (item.isHalfAndHalf && item.secondHalfProduct) {
-               for (const ing of item.product?.ingredients || []) {
-                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
-                     usageMap[ing.ingredientId].consumed += (ing.quantity * item.quantity) / 2;
-                  }
-               }
-               for (const ing of item.secondHalfProduct?.ingredients || []) {
-                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
-                     usageMap[ing.ingredientId].consumed += (ing.quantity * item.quantity) / 2;
-                  }
-               }
-            } else {
-               for (const ing of item.product?.ingredients || []) {
-                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
-                     usageMap[ing.ingredientId].consumed += ing.quantity * item.quantity;
-                  }
-               }
-            }
-         });
-      });
-
       const dataMap: Record<string, { date: string, ventas: number, gastos: number }> = {};
 
       if (timeRange !== "all") {
@@ -78,14 +38,59 @@ export function MetricsClient({ orders, products, ingredients }: { orders: any[]
          }
       }
 
+      let tRevenue = 0;
+      let tExpenses = 0;
+      
       fOrders.forEach(o => {
+         tRevenue += o.total;
+         
          const d = format(new Date(o.createdAt), 'yyyy-MM-dd');
          if (!dataMap[d]) dataMap[d] = { date: d, ventas: 0, gastos: 0 };
          dataMap[d].ventas += o.total;
-         
-         let expenseForOrder = 0;
-         o.items?.forEach((item: any) => expenseForOrder += (item.product?.suggestedCost || 0) * item.quantity);
-         dataMap[d].gastos += expenseForOrder;
+
+         o.items?.forEach((item: any) => {
+            let expenseForThisItem = 0;
+            const removedIngIds = item.removedIngredients?.map((r:any) => r.ingredientId) || [];
+            
+            if (item.product?.isCombo && item.comboItems) {
+               for (const ci of item.comboItems) {
+                  const ciRemovedIds = ci.removedIngredients?.map((r:any) => r.ingredientId) || [];
+                  for (const ing of ci.product.ingredients || []) {
+                     if (!ciRemovedIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                        const qty = ing.quantity * item.quantity;
+                        usageMap[ing.ingredientId].consumed += qty;
+                        expenseForThisItem += qty * usageMap[ing.ingredientId].cost;
+                     }
+                  }
+               }
+            } else if (item.isHalfAndHalf && item.secondHalfProduct) {
+               for (const ing of item.product?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     const qty = (ing.quantity * item.quantity) / 2;
+                     usageMap[ing.ingredientId].consumed += qty;
+                     expenseForThisItem += qty * usageMap[ing.ingredientId].cost;
+                  }
+               }
+               for (const ing of item.secondHalfProduct?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     const qty = (ing.quantity * item.quantity) / 2;
+                     usageMap[ing.ingredientId].consumed += qty;
+                     expenseForThisItem += qty * usageMap[ing.ingredientId].cost;
+                  }
+               }
+            } else {
+               for (const ing of item.product?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     const qty = ing.quantity * item.quantity;
+                     usageMap[ing.ingredientId].consumed += qty;
+                     expenseForThisItem += qty * usageMap[ing.ingredientId].cost;
+                  }
+               }
+            }
+            
+            tExpenses += expenseForThisItem;
+            dataMap[d].gastos += expenseForThisItem;
+         });
       });
 
       const cData = Object.values(dataMap).sort((a, b) => a.date.localeCompare(b.date));
@@ -111,12 +116,29 @@ export function MetricsClient({ orders, products, ingredients }: { orders: any[]
    }, [orders, timeRange]);
 
    const analyzedProducts = products.map(p => {
-      const fcPercent = p.basePrice > 0 ? (p.suggestedCost / p.basePrice) * 100 : 0;
+      let currentCost = 0;
+      if (p.isCombo) {
+         p.comboItemsConfig?.forEach((ci: any) => {
+            let sub = 0;
+            ci.product?.ingredients?.forEach((ing: any) => {
+               const costPerUnit = ingredients.find(i => i.id === ing.ingredientId)?.costPerUnit || 0;
+               sub += costPerUnit * ing.quantity;
+            });
+            currentCost += sub * ci.quantity;
+         });
+      } else {
+         p.ingredients?.forEach((ing: any) => {
+            const costPerUnit = ingredients.find(i => i.id === ing.ingredientId)?.costPerUnit || 0;
+            currentCost += costPerUnit * ing.quantity;
+         });
+      }
+      
+      const fcPercent = p.basePrice > 0 ? (currentCost / p.basePrice) * 100 : 0;
       let status = "green";
       if (fcPercent > 35) status = "red";
       else if (fcPercent > 25) status = "yellow";
 
-      return { ...p, fcPercent, status };
+      return { ...p, currentCost, fcPercent, status };
    }).sort((a, b) => b.fcPercent - a.fcPercent);
 
    const redAlerts = analyzedProducts.filter(p => p.status === 'red');
@@ -225,7 +247,7 @@ export function MetricsClient({ orders, products, ingredients }: { orders: any[]
                         <div key={p.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                            <div>
                               <h4 className="font-bold text-slate-800">{p.name}</h4>
-                              <p className="text-xs text-muted-foreground">Vended a: ${p.basePrice} | Cuesta: ${p.suggestedCost.toLocaleString('es-AR', { maximumFractionDigits: 1 })}</p>
+                              <p className="text-xs text-muted-foreground">Vendes a: ${p.basePrice} | Cuesta: ${p.currentCost.toLocaleString('es-AR', { maximumFractionDigits: 1 })}</p>
                            </div>
                            <div className="text-right">
                               <span className="bg-red-100 text-red-700 font-black px-2 py-1 rounded text-sm block">FC: {p.fcPercent.toFixed(1)}%</span>
@@ -249,7 +271,7 @@ export function MetricsClient({ orders, products, ingredients }: { orders: any[]
                         <div key={p.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                            <div>
                               <h4 className="font-semibold text-slate-800 text-sm">{p.name}</h4>
-                              <p className="text-xs text-muted-foreground">${p.suggestedCost.toLocaleString('es-AR', { maximumFractionDigits: 1 })} / ${p.basePrice}</p>
+                              <p className="text-xs text-muted-foreground">${p.currentCost.toLocaleString('es-AR', { maximumFractionDigits: 1 })} / ${p.basePrice}</p>
                            </div>
                            <div className="text-right">
                               <span className={`px-2 py-1 rounded text-xs font-bold ${p.status === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
