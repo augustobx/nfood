@@ -94,8 +94,9 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
       const systemConfig = await prisma.systemConfig.findFirst();
       if (systemConfig?.vapidPublicKey && systemConfig?.vapidPrivateKey) {
         const webpush = require("web-push");
+        // CORRECCIÓN: Restaurado tu email real para que Google/Apple autoricen el envío.
         webpush.setVapidDetails(
-          'mailto:soporte@tu-dominio.com',
+          process.env.BASE_URL || 'mailto:soporte@nanolabs.online',
           systemConfig.vapidPublicKey,
           systemConfig.vapidPrivateKey
         );
@@ -114,7 +115,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
           };
 
           const payload = JSON.stringify({
-            title: "Actualización de pedido",
+            title: "Actualización de tu pedido",
             body: statusMap[newStatus] || "Tu pedido cambió de estado.",
             url: `/track/${orderId}`
           });
@@ -201,8 +202,9 @@ export async function dispatchMessengerRoadmap(messengerId: string) {
       const systemConfig = await prisma.systemConfig.findFirst();
       if (systemConfig?.vapidPublicKey && systemConfig?.vapidPrivateKey) {
         const webpush = require("web-push");
+        // CORRECCIÓN: Restaurado tu email real también aquí.
         webpush.setVapidDetails(
-          'mailto:soporte@tu-dominio.com',
+          process.env.BASE_URL || 'mailto:soporte@nanolabs.online',
           systemConfig.vapidPublicKey,
           systemConfig.vapidPrivateKey
         );
