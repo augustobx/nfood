@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 export async function updateConfig(id: string, data: any) {
   try {
     const config = await prisma.systemConfig.findUnique({ where: { id } });
-    
+
     // If opening store, reset time slots capacities
     if (config && !config.isStoreOpen && data.isStoreOpen === true) {
       const slots = await prisma.deliveryTimeSlot.findMany();
@@ -59,10 +59,10 @@ export async function updateSlotAvailable(id: string, delta: number) {
   try {
     const slot = await prisma.deliveryTimeSlot.findUnique({ where: { id } });
     if (!slot) throw new Error("Slot missing");
-    
+
     // Calculate new but don't exceed max capacity? Actually let them exceed if they want manually
     const newAvailable = Math.max(0, slot.available + delta);
-    
+
     await prisma.deliveryTimeSlot.update({
       where: { id },
       data: { available: newAvailable }
@@ -103,5 +103,60 @@ export async function toggleMessenger(id: string, isActive: boolean) {
     return { success: true };
   } catch (error) {
     return { success: false, error: "Error al actualizar mensajero" };
+  }
+}
+
+// NUEVA FUNCIÓN PARA ENVÍO MASIVO / PRUEBAS PUSH
+export async function broadcastPushNotification(title: string, body: string, url: string = "/") {
+  try {
+    const config = await prisma.systemConfig.findFirst();
+    if (!config?.vapidPublicKey || !config?.vapidPrivateKey) {
+      return { success: false, error: "Las claves VAPID no están configuradas en el sistema." };
+    }
+
+    const webpush = require("web-push");
+    webpush.setVapidDetails(
+      process.env.BASE_URL || 'mailto:soporte@nanolabs.online',
+      config.vapidPublicKey,
+      config.vapidPrivateKey
+    );
+
+    // Obtener todas las suscripciones únicas de la base de datos
+    const subscriptions = await prisma.pushSubscription.findMany();
+
+    if (subscriptions.length === 0) {
+      return { success: false, error: "No hay ningún dispositivo suscrito a las notificaciones." };
+    }
+
+    const payload = JSON.stringify({ title, body, url });
+    let successCount = 0;
+    let failCount = 0;
+
+    // Disparar en paralelo usando Promise.allSettled para mayor velocidad
+    const pushPromises = subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification({
+          endpoint: sub.endpoint,
+          keys: { auth: sub.auth, p256dh: sub.p256dh }
+        }, payload);
+        successCount++;
+      } catch (pushErr: any) {
+        failCount++;
+        // Si el dispositivo ya no existe o revocó el permiso, lo borramos de la DB
+        if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
+          await prisma.pushSubscription.delete({ where: { id: sub.id } });
+        }
+      }
+    });
+
+    await Promise.allSettled(pushPromises);
+
+    return {
+      success: true,
+      message: `Enviado a ${successCount} dispositivos. (${failCount} suscripciones inactivas eliminadas).`
+    };
+  } catch (error) {
+    console.error("Broadcast Push Error:", error);
+    return { success: false, error: "Error interno al procesar el envío masivo." };
   }
 }
