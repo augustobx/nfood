@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ShoppingBag, ChevronDown, Plus, Minus, Search, Layers, Star, User, ReceiptText, Info, Gift } from "lucide-react";
 import { AuthModal } from "@/components/AuthModal";
 import { RouletteModal } from "@/components/RouletteModal";
-// Importamos 'Variants' para que TypeScript no proteste con las animaciones
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +76,6 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
     else resetForm();
   }
 
-  // CORRECCIÓN: Tipamos explícitamente como 'Variants' para evitar error de 'ease'
   const expandVariants: Variants = {
     hidden: { height: 0, opacity: 0, overflow: 'hidden' },
     visible: {
@@ -150,7 +148,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
                 </div>
               )}
 
-              {/* Ingredients Config (Not Combos) */}
+              {/* Ingredients Config */}
               {!product.isCombo && product.ingredients?.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Ingredientes </h4>
@@ -288,13 +286,11 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   };
 
   const handleToggleCategory = (id: string | null) => {
-    // If strict accordion mode:
     if (openCategoryId === id) setOpenCategoryId(null);
     else setOpenCategoryId(id);
   };
 
   const hasItems = items.length > 0;
-
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
@@ -306,25 +302,22 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   const [showSplash, setShowSplash] = useState(config?.splashEnabled);
   const [showWelcome, setShowWelcome] = useState(false);
 
+  // CORRECCIÓN SPLASH: Ahora se muestra siempre al recargar la página, se eliminó la restricción de sessionStorage
   useEffect(() => {
     if (config?.splashEnabled) {
-      if (sessionStorage.getItem("nfood_splash_done") === "true") {
-        setShowSplash(false);
-        return;
-      }
+      setShowSplash(true);
       const timer = setTimeout(() => {
         setShowSplash(false);
-        sessionStorage.setItem("nfood_splash_done", "true");
       }, (config.splashDuration || 3) * 1000);
       return () => clearTimeout(timer);
     } else {
       setShowSplash(false);
     }
-  }, [config]);
+  }, [config?.splashEnabled, config?.splashDuration]);
 
   useEffect(() => {
     if (config?.welcomeBalloonEnabled && !showSplash) {
-      setShowWelcome(false); // Reset just in case
+      setShowWelcome(false);
       const t1 = setTimeout(() => setShowWelcome(true), 1000);
       const t2 = setTimeout(() => { setShowWelcome(false); }, ((config.welcomeBalloonDuration || 5) * 1000) + 1000);
       return () => { clearTimeout(t1); clearTimeout(t2); };
@@ -336,7 +329,6 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
     setIsAuthModalOpen(false);
   };
 
-  // Flatten products for search
   const allProds = [
     ...combos,
     ...categories.flatMap(c => c.products)
@@ -346,14 +338,26 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
     ? allProds.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(searchTerm.toLowerCase()))
     : [];
 
-  const customStyles = {
+  // CORRECCIÓN BACKGROUND: Separación de estilos para variables CSS y estilos de fondo
+  const themeVars = {
     '--brand-primary': config?.primaryColor || '#f97316',
     '--brand-secondary': config?.secondaryColor || '#9333ea',
   } as React.CSSProperties;
 
+  const mainBackgroundStyles: React.CSSProperties = {
+    ...themeVars,
+    backgroundColor: config?.backgroundColor || '#f8fafc',
+    ...(config?.backgroundUrl && {
+      backgroundImage: `url(${config.backgroundUrl})`,
+      backgroundSize: 'cover',
+      backgroundAttachment: 'fixed',
+      backgroundPosition: 'center',
+    })
+  };
+
   if (showSplash) {
     return (
-      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center text-white p-4 text-center transition-opacity duration-500" style={{ backgroundColor: config?.primaryColor || '#f97316', ...customStyles }}>
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center text-white p-4 text-center transition-opacity duration-500" style={{ backgroundColor: config?.primaryColor || '#f97316', ...themeVars }}>
         {config?.logoUrl ? <img src={config.logoUrl} className="w-32 h-32 object-contain animate-pulse mb-6" /> : <div className="text-6xl mb-6 animate-bounce">🍕</div>}
         <h1 className="text-4xl font-black">{config?.appName || 'nfood'}</h1>
         <div className="mt-8 w-24 h-1.5 bg-white/30 rounded-full overflow-hidden">
@@ -364,7 +368,8 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   }
 
   return (
-    <div className="min-h-screen bg-transparent pb-32" style={customStyles}>
+    // CORRECCIÓN: Se aplica el mainBackgroundStyles aquí para forzar la visibilidad del fondo.
+    <div className="min-h-screen pb-32" style={mainBackgroundStyles}>
 
       {/* Header Banner */}
       <div className="bg-brand-primary pb-12 pt-12 px-4 rounded-b-[40px] shadow-sm mb-[-20px] relative z-0 border-b-4" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
@@ -415,7 +420,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
           <Search className="w-5 h-5 text-muted-foreground ml-2" />
           <Input
             placeholder="Buscar productos o combos..."
-            className="border-0 shadow-none focus-visible:ring-0 px-2 h-10 text-base"
+            className="border-0 shadow-none focus-visible:ring-0 px-2 h-10 text-base bg-transparent"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
@@ -424,7 +429,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
 
         {/* Searching mode */}
         {searchTerm.length > 2 ? (
-          <div className="bg-white rounded-3xl shadow-sm border overflow-hidden">
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-sm border overflow-hidden">
             <div className="p-4 border-b bg-slate-50/50">
               <h3 className="font-black text-lg text-slate-800">Resultados para "{searchTerm}"</h3>
             </div>
@@ -440,7 +445,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
 
             {/* Combos Accordion */}
             {combos.length > 0 && (
-              <motion.div layout className="bg-white rounded-3xl shadow-sm border overflow-hidden border-purple-200" transition={{ duration: 0.3 }}>
+              <motion.div layout className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-sm border overflow-hidden border-purple-200" transition={{ duration: 0.3 }}>
                 <button
                   onClick={() => handleToggleCategory('combos')}
                   className="w-full p-5 flex items-center justify-between text-left focus:outline-none focus-visible:bg-slate-50 transition-colors"
@@ -479,7 +484,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
 
             {/* Standard Categories */}
             {categories.filter(c => c.products?.length > 0).map(category => (
-              <motion.div layout key={category.id} className="bg-white rounded-3xl shadow-sm border overflow-hidden" transition={{ duration: 0.3 }}>
+              <motion.div layout key={category.id} className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-sm border overflow-hidden" transition={{ duration: 0.3 }}>
                 <button
                   onClick={() => handleToggleCategory(category.id)}
                   className="w-full p-5 flex items-center justify-between text-left focus:outline-none focus-visible:bg-slate-50 transition-colors"
@@ -531,7 +536,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
           >
             <div className="max-w-xl mx-auto pointer-events-auto">
               <Link href="/cart">
-                <Button className="w-full h-16 rounded-[2rem] bg-brand-primary hover:bg-black text-white shadow-2xl flex items-center justify-between px-6 text-lg group">
+                <Button className="w-full h-16 rounded-[2rem] bg-brand-primary hover:bg-black text-white shadow-2xl flex items-center justify-between px-6 text-lg group border-2 border-transparent">
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <ShoppingBag className="w-6 h-6 text-white" />
