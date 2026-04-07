@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { updateConfig } from "@/app/actions/admin-settings";
 import { Save, Store, Palette, Wallet, Megaphone } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard } from "lucide-react";
 
 export function SettingsForm({ initialConfig }: { initialConfig: any }) {
   const [cfg, setCfg] = useState(initialConfig);
@@ -42,7 +43,9 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
        paymentMp: cfg.paymentMp,
        autoPrintTickets: cfg.autoPrintTickets,
        backgroundUrl: cfg.backgroundUrl,
-       backgroundBlur: cfg.backgroundBlur
+       backgroundBlur: cfg.backgroundBlur,
+       mpAccessToken: cfg.mpAccessToken,
+       mpPublicKey: cfg.mpPublicKey
     };
     
     const result = await updateConfig(cfg.id, dataToSave);
@@ -63,9 +66,10 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-         <TabsList className="grid w-full grid-cols-4 bg-slate-200">
+         <TabsList className="grid w-full grid-cols-5 bg-slate-200">
             <TabsTrigger value="general"><Store className="w-4 h-4 mr-2"/> Negocio</TabsTrigger>
             <TabsTrigger value="finance"><Wallet className="w-4 h-4 mr-2"/> Pagos y Envíos</TabsTrigger>
+            <TabsTrigger value="mercadopago"><CreditCard className="w-4 h-4 mr-2"/> Mercado Pago</TabsTrigger>
             <TabsTrigger value="marketing"><Megaphone className="w-4 h-4 mr-2"/> Splash y Mkt</TabsTrigger>
             <TabsTrigger value="theme"><Palette className="w-4 h-4 mr-2"/> Branding</TabsTrigger>
          </TabsList>
@@ -153,6 +157,38 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
                      <Switch checked={cfg.paymentMp} onCheckedChange={v => updateField('paymentMp', v)} />
                    </div>
                 </div>
+              </CardContent>
+            </Card>
+         </TabsContent>
+
+         <TabsContent value="mercadopago" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Integración Mercado Pago</CardTitle>
+                <CardDescription>Credenciales de Producción de tu cuenta de Mercado Pago.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                 <div className="space-y-4 bg-slate-50 p-4 border rounded-xl">
+                    <div className="space-y-2">
+                       <Label className="font-bold">Access Token</Label>
+                       <Input 
+                         type="password" 
+                         placeholder="APP_USR-..." 
+                         value={cfg.mpAccessToken || ''} 
+                         onChange={e => updateField('mpAccessToken', e.target.value)} 
+                       />
+                       <p className="text-xs text-muted-foreground">Token privado necesario para generar los cobros.</p>
+                    </div>
+                    <div className="space-y-2 pt-2">
+                       <Label className="font-bold">Public Key</Label>
+                       <Input 
+                         placeholder="APP_USR-..." 
+                         value={cfg.mpPublicKey || ''} 
+                         onChange={e => updateField('mpPublicKey', e.target.value)} 
+                       />
+                       <p className="text-xs text-muted-foreground">Clave pública de la aplicación.</p>
+                    </div>
+                 </div>
               </CardContent>
             </Card>
          </TabsContent>

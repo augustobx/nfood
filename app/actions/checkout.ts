@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getLoggedClient } from "@/lib/auth";
+import { MercadoPagoConfig, Preference } from "mercadopago";
 
 export async function fetchConfig() {
   const config = await prisma.systemConfig.findFirst();
@@ -113,7 +114,52 @@ export async function createOrder(data: any) {
 
     revalidatePath("/admin/live");
 
-    return { success: true, orderId: order.id };
+    let mpInitPoint = undefined;
+    if (paymentMethod === "MP") {
+      const config = await prisma.systemConfig.findFirst();
+      if (config?.mpAccessToken) {
+        try {
+          const client = new MercadoPagoConfig({ accessToken: config.mpAccessToken, options: { timeout: 5000 } });
+          const preference = new Preference(client);
+          
+          const baseUrl = data.baseUrl || "http://localhost:3000";
+
+          const result = await preference.create({
+            body: {
+              items: [
+                {
+                  id: order.id,
+                  title: `Pedido en ${config.appName}`,
+                  quantity: 1,
+                  unit_price: Number(total.toFixed(2))
+                }
+              ],
+              external_reference: order.id,
+              back_urls: {
+                success: `${baseUrl}/track/${order.id}?status=approved`,
+                failure: `${baseUrl}/track/${order.id}?status=failure`,
+                pending: `${baseUrl}/track/${order.id}?status=pending`
+              },
+              auto_return: "approved",
+              notification_url: `${baseUrl}/api/webhooks/mercadopago`
+            }
+          });
+
+          if (result.id && result.init_point) {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { mpPreferenceId: result.id }
+            });
+            mpInitPoint = result.init_point;
+          }
+        } catch (mpError) {
+          console.error("MP Preference Error:", mpError);
+          // If MP fails, we just don't return initPoint, the order remains PENDING
+        }
+      }
+    }
+
+    return { success: true, orderId: order.id, mpInitPoint };
   } catch (error) {
     console.error("Order creation failed:", error);
     return { success: false, error: "Error al crear el pedido" };

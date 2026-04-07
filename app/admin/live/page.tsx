@@ -227,6 +227,13 @@ export default function LiveDashboardPage() {
                             <div className="text-xs font-bold text-slate-500 line-clamp-1">{order.clientName}</div>
                           </div>
                           <div className="flex gap-1 items-center">
+                            {order.paymentMethod === 'MP' ? (
+                              order.paymentStatus === 'PAID' ? 
+                                <Badge className="bg-green-100 text-green-700 border-green-300 text-[10px] px-1 pointer-events-none">MP: OK</Badge> : 
+                                <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-[10px] px-1 pointer-events-none">MP: PEND</Badge>
+                            ) : (
+                                <Badge className="bg-slate-100 text-slate-700 border-slate-300 text-[10px] px-1 pointer-events-none">EFVO</Badge>
+                            )}
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-black hover:bg-slate-100" onClick={(e) => { e.stopPropagation(); window.open(`/admin/live/print/${order.id}`, '_blank', 'width=300,height=500'); }}>
                               <Printer className="w-4 h-4" />
                             </Button>
@@ -237,9 +244,18 @@ export default function LiveDashboardPage() {
                         </div>
 
                         {col.id === "NEW" && (
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold" onClick={() => handleStatusChange(order.id, "CANCELLED")}><Trash2 className="w-3 h-3 mr-1" /> Rechazar</Button>
-                            <Button size="sm" className="flex-1 bg-yellow-500 hover:bg-yellow-600 font-bold text-white shadow-sm" onClick={() => handleStatusChange(order.id, "IN_PROCESS")}>Cocinar</Button>
+                          <div className="flex flex-col gap-2 relative">
+                             {order.paymentMethod === 'MP' && order.paymentStatus === 'PENDING' && (
+                               <div className="absolute inset-0 bg-yellow-400/90 z-10 flex flex-col items-center justify-center rounded-lg border-2 border-yellow-500 backdrop-blur-sm p-2 text-center shadow-lg">
+                                 <AlertCircle className="w-6 h-6 text-yellow-900 mb-1" />
+                                 <span className="font-black text-yellow-900 leading-tight text-xs uppercase">Pago MP Pendiente</span>
+                                 <span className="text-[10px] text-yellow-800 font-bold leading-none mt-1">Esperando validación</span>
+                               </div>
+                             )}
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" className="flex-1 border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold" onClick={() => handleStatusChange(order.id, "CANCELLED")}><Trash2 className="w-3 h-3 mr-1" /> Rechazar</Button>
+                              <Button size="sm" className="flex-1 bg-yellow-500 hover:bg-yellow-600 font-bold text-white shadow-sm" onClick={() => handleStatusChange(order.id, "IN_PROCESS")}>Cocinar</Button>
+                            </div>
                           </div>
                         )}
 

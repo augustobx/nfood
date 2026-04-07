@@ -38,6 +38,9 @@ model SystemConfig {
   isRouletteActive Boolean @default(false)
   rouletteCost     Int     @default(100)
 
+  mpAccessToken    String?
+  mpPublicKey      String?
+
   updatedAt       DateTime @updatedAt
 }
 
