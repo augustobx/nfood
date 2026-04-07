@@ -18,10 +18,10 @@ self.addEventListener('push', (event) => {
         console.error("Error al procesar la notificación PUSH", e);
     }
 
-    const title = data.title || "Notificación de NFood";
+    const title = data.title || "Notificación de Raptor Burger";
     const options = {
         body: data.body || "Tienes una nueva actualización en tu pedido.",
-        icon: "/apple-icon.png",
+        icon: "/logo.png",
         badge: "/logo.png",
         vibrate: [200, 100, 200, 100, 200],
         data: {
