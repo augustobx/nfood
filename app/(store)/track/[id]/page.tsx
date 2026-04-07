@@ -37,10 +37,20 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
 
   const currentIndex = statuses.findIndex(s => s.id === order.status);
 
+  if (searchParams?.mp_start === "1") {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4 animate-in fade-in zoom-in">
+        <MPReturnHandler mpStart={searchParams?.mp_start} mpUrl={searchParams?.mp_url} status={searchParams?.status || undefined} orderId={order.id} />
+        <div className="w-16 h-16 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+        <h2 className="text-xl font-bold text-center text-orange-600 animate-pulse">Conectando con Mercado Pago...</h2>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <AutoRefresh intervalMs={30000} />
-      <MPReturnHandler mpStart={searchParams?.mp_start} mpUrl={searchParams?.mp_url} status={searchParams?.status || undefined} orderId={order.id} />
+      <MPReturnHandler status={searchParams?.status || undefined} orderId={order.id} />
       
       <div className="text-center space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>

@@ -1,11 +1,13 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { cancelOrderFromMP } from "@/app/actions/checkout";
 import { useCartStore } from "@/lib/store";
+import { Button } from "@/components/ui/button";
 
 export default function MPReturnHandler({ status, orderId, mpStart, mpUrl }: { status?: string, orderId: string, mpStart?: string, mpUrl?: string }) {
   const clearCart = useCartStore(state => state.clearCart);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
 
   useEffect(() => {
     const handleMP = async () => {
@@ -13,10 +15,12 @@ export default function MPReturnHandler({ status, orderId, mpStart, mpUrl }: { s
 
       // 1. MP SUCCESS FLIGHT
       if (status === "approved" || status === "success") {
-        sessionStorage.removeItem(memoryKey);
-        clearCart();
-        toast.success("¡Pago Confirmado!", { description: "Mercado Pago ha validado el pago." });
-        try { new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3").play(); } catch(e){}
+        const memoryWasCleaned = !sessionStorage.getItem(memoryKey);
+        if (!memoryWasCleaned) {
+           sessionStorage.removeItem(memoryKey);
+           clearCart();
+           setShowSuccessOverlay(true);
+        }
         return;
       }
 
@@ -47,5 +51,25 @@ export default function MPReturnHandler({ status, orderId, mpStart, mpUrl }: { s
     
     handleMP();
   }, [status, orderId, mpStart, mpUrl, clearCart]);
+
+  if (showSuccessOverlay) {
+     return (
+       <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6 text-center">
+          <div className="space-y-6">
+             <h2 className="text-3xl font-extrabold text-white">¡Pago Aprobado!</h2>
+             <Button 
+                onClick={() => {
+                   setShowSuccessOverlay(false);
+                   try { new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3").play() } catch(e){}
+                }}
+                className="bg-green-600 hover:bg-green-500 text-white font-bold h-20 px-12 text-xl rounded-2xl animate-pulse"
+             >
+                Ver Mi Pedido
+             </Button>
+          </div>
+       </div>
+     );
+  }
+
   return null;
 }
