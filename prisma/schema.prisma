@@ -125,6 +125,12 @@ model Ingredient {
   id              String  @id @default(uuid())
   name            String
   isActive        Boolean @default(true)
+
+  purchaseVolume   String?
+  purchasePrice    Float    @default(0)
+  yieldUnits       Float    @default(1)
+  costPerUnit      Float    @default(0)
+  stock            Float    @default(0)
   
   categories      IngredientCategory[]
   products        ProductIngredient[]

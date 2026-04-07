@@ -19,23 +19,23 @@ export async function toggleCategory(id: string, isActive: boolean) {
   } catch (error) { return { success: false, error: "Error al actualizar categoría" }; }
 }
 
-export async function upsertProduct(data: { 
+export async function upsertProduct(data: {
   id?: string,
-  name: string, 
-  basePrice: number, 
+  name: string,
+  basePrice: number,
   points: number,
-  description: string, 
-  categoryId?: string | null, 
-  imageUrl: string, 
-  ingredientsData: {id: string, quantity: number}[], 
+  description: string,
+  categoryId?: string | null,
+  imageUrl: string,
+  ingredientsData: { id: string, quantity: number }[],
   extraIds: string[],
   allowHalf: boolean,
   onlyHalf: boolean,
   isCombo: boolean,
-  comboItemsData: {id: string, quantity: number}[]
+  comboItemsData: { id: string, quantity: number }[]
 }) {
   try {
-    const payload = { 
+    const payload = {
       name: data.name,
       basePrice: data.basePrice,
       points: data.points,
@@ -65,14 +65,14 @@ export async function upsertProduct(data: {
       ]);
     } else {
       // Create logic
-      await prisma.product.create({ 
-        data: { 
+      await prisma.product.create({
+        data: {
           ...payload,
           isActive: true,
           ingredients: { create: data.ingredientsData.map(ing => ({ ingredientId: ing.id, isRemovable: true, quantity: ing.quantity })) },
           extras: { create: data.extraIds.map(id => ({ extraId: id })) },
           comboItemsConfig: data.isCombo ? { create: data.comboItemsData.map(item => ({ productId: item.id, quantity: item.quantity })) } : undefined
-        } 
+        }
       });
     }
 
@@ -97,20 +97,49 @@ export async function toggleProductImage(id: string, showImage: boolean) {
   } catch (error) { return { success: false, error: "Error al actualizar mostrar imagen" }; }
 }
 
-export async function addIngredient(name: string, categoryIds: string[]) {
+export async function addIngredient(data: { name: string, categoryIds: string[], purchaseVolume: string, purchasePrice: number, yieldUnits: number }) {
   try {
+    // Calculamos el costo por unidad automáticamente
+    const costPerUnit = data.yieldUnits > 0 ? data.purchasePrice / data.yieldUnits : 0;
+
     await prisma.ingredient.create({
       data: {
-        name,
-        isActive: true,
+        name: data.name,
+        purchaseVolume: data.purchaseVolume,
+        purchasePrice: data.purchasePrice,
+        yieldUnits: data.yieldUnits,
+        costPerUnit: costPerUnit,
+        stock: data.yieldUnits, // El stock inicial es lo que rinde esa primera compra
         categories: {
-          create: categoryIds.map(id => ({ categoryId: id }))
+          create: data.categoryIds.map(id => ({ categoryId: id }))
         }
       }
     });
-    revalidatePath("/admin/catalog"); revalidatePath("/");
+    revalidatePath("/admin/catalog");
     return { success: true };
-  } catch (error) { console.error(error); return { success: false, error: "Error al crear ingrediente" }; }
+  } catch (error) {
+    return { success: false, error: "Error al crear ingrediente." };
+  }
+}
+
+export async function restockIngredient(id: string, purchasePrice: number, yieldUnits: number, purchaseVolume: string) {
+  try {
+    const costPerUnit = yieldUnits > 0 ? purchasePrice / yieldUnits : 0;
+    await prisma.ingredient.update({
+      where: { id },
+      data: {
+        purchasePrice,
+        yieldUnits,
+        purchaseVolume,
+        costPerUnit,
+        stock: { increment: yieldUnits } // Sumamos el nuevo rinde al stock que ya había
+      }
+    });
+    revalidatePath("/admin/catalog");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Error al recargar stock." };
+  }
 }
 
 export async function toggleIngredient(id: string, isActive: boolean) {
