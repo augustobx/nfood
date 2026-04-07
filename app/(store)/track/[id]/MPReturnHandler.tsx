@@ -2,8 +2,11 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { cancelOrderFromMP } from "@/app/actions/checkout";
+import { useCartStore } from "@/lib/store";
 
 export default function MPReturnHandler({ status, orderId }: { status?: string, orderId: string }) {
+  const clearCart = useCartStore(state => state.clearCart);
+
   useEffect(() => {
     const handleMP = async () => {
       const memoryKey = `mp_checkout_${orderId}`;
@@ -12,6 +15,7 @@ export default function MPReturnHandler({ status, orderId }: { status?: string, 
       if (isApproved) {
         // Successful payment, let's play sound and clear memory
         sessionStorage.removeItem(memoryKey);
+        clearCart();
         toast.success("¡Pago Confirmado!", { description: "Mercado Pago ha validado el pago con éxito. ¡Gracias!" });
         try {
           const audio = new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3");

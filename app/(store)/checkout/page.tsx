@@ -123,9 +123,6 @@ export default function CheckoutPage() {
       const baseUrl = window.location.origin;
       const result = await createOrder({ ...formData, items: finalItems, total, baseUrl });
       if (result.success) {
-        setIsSuccess(true);
-        clearCart(); // Always clear cart so it doesn't duplicate
-
         if (formData.paymentMethod === 'MP') {
            toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
            
@@ -134,9 +131,13 @@ export default function CheckoutPage() {
               window.history.replaceState(null, "", `/track/${result.orderId}`);
               window.location.href = result.mpInitPoint;
            } else {
+              setIsSuccess(true);
+              clearCart();
               router.push(`/track/${result.orderId}`);
            }
         } else {
+           setIsSuccess(true);
+           clearCart();
            // Efectivo: Mostrar éxito y rugido
            toast.success("¡Pedido enviado con éxito!", { description: "Cocina ya lo está preparando." });
            try {
