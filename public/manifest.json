@@ -1,6 +1,6 @@
 {
-  "name": "nfood Online",
-  "short_name": "nfood",
+  "name": "Raptor Burgers",
+  "short_name": "RBurgers",
   "description": "Pedí tu comida rápida online rápida y fácilmente.",
   "start_url": "/",
   "display": "standalone",

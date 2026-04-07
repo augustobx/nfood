@@ -10,10 +10,10 @@ import {
 import { format, subDays, isAfter, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
-export function MetricsClient({ orders, expenses, products }: { orders: any[], expenses: any[], products: any[] }) {
+export function MetricsClient({ orders, products }: { orders: any[], products: any[] }) {
    const [timeRange, setTimeRange] = useState("30");
 
-   const { filteredOrders, filteredExpenses, chartData, totals } = useMemo(() => {
+   const { filteredOrders, chartData, totals } = useMemo(() => {
       let startDate = new Date(0);
       const now = new Date();
 
@@ -22,13 +22,15 @@ export function MetricsClient({ orders, expenses, products }: { orders: any[], e
       }
 
       const fOrders = orders.filter(o => isAfter(new Date(o.createdAt), startDate));
-      const fExpenses = expenses.filter(e => isAfter(new Date(e.date), startDate));
 
       let tRevenue = 0;
-      fOrders.forEach(o => tRevenue += o.total);
-
       let tExpenses = 0;
-      fExpenses.forEach(e => tExpenses += e.amount);
+      fOrders.forEach(o => {
+         tRevenue += o.total;
+         o.items?.forEach((item: any) => {
+            tExpenses += (item.product?.suggestedCost || 0) * item.quantity;
+         });
+      });
 
       const dataMap: Record<string, { date: string, ventas: number, gastos: number }> = {};
 
@@ -43,12 +45,10 @@ export function MetricsClient({ orders, expenses, products }: { orders: any[], e
          const d = format(new Date(o.createdAt), 'yyyy-MM-dd');
          if (!dataMap[d]) dataMap[d] = { date: d, ventas: 0, gastos: 0 };
          dataMap[d].ventas += o.total;
-      });
-
-      fExpenses.forEach(e => {
-         const d = format(new Date(e.date), 'yyyy-MM-dd');
-         if (!dataMap[d]) dataMap[d] = { date: d, ventas: 0, gastos: 0 };
-         dataMap[d].gastos += e.amount;
+         
+         let expenseForOrder = 0;
+         o.items?.forEach((item: any) => expenseForOrder += (item.product?.suggestedCost || 0) * item.quantity);
+         dataMap[d].gastos += expenseForOrder;
       });
 
       const cData = Object.values(dataMap).sort((a, b) => a.date.localeCompare(b.date));
@@ -60,7 +60,6 @@ export function MetricsClient({ orders, expenses, products }: { orders: any[], e
 
       return {
          filteredOrders: fOrders,
-         filteredExpenses: fExpenses,
          chartData: cDataFormatted,
          totals: {
             revenue: tRevenue,
@@ -69,7 +68,7 @@ export function MetricsClient({ orders, expenses, products }: { orders: any[], e
             foodCostPct: tRevenue > 0 ? (tExpenses / tRevenue) * 100 : 0
          }
       };
-   }, [orders, expenses, timeRange]);
+   }, [orders, timeRange]);
 
    const analyzedProducts = products.map(p => {
       const fcPercent = p.basePrice > 0 ? (p.suggestedCost / p.basePrice) * 100 : 0;

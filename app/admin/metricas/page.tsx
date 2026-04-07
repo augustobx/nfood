@@ -4,7 +4,7 @@ import { MetricsClient } from "./MetricsClient";
 export const dynamic = "force-dynamic";
 
 export default async function MetricsPage() {
-  const [orders, expenses, products] = await Promise.all([
+  const [orders, products] = await Promise.all([
      prisma.order.findMany({
        where: { status: { not: 'CANCELLED' } },
        include: {
@@ -15,12 +15,6 @@ export default async function MetricsPage() {
          }
        },
        orderBy: { createdAt: 'asc' }
-     }),
-     prisma.expense.findMany({
-       include: {
-         supply: true
-       },
-       orderBy: { date: 'asc' }
      }),
      prisma.product.findMany({
        where: { isActive: true },
@@ -36,7 +30,7 @@ export default async function MetricsPage() {
            Inteligencia de negocios y Food Cost general.
         </p>
       </div>    
-      <MetricsClient orders={orders} expenses={expenses} products={products} />
+      <MetricsClient orders={orders} products={products} />
     </div>
   );
 }
