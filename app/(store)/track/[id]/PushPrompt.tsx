@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BellRing, Check, Info } from "lucide-react";
+import { BellRing, Check, Info, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 // Utility to convert Base64 string to Uint8Array
@@ -46,8 +46,8 @@ export function PushPrompt({ orderId, clientId }: { orderId?: string, clientId?:
     setIsIOS(ios);
     setIsStandalone(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
 
-    // Detectar si es Chrome en iOS
-    setIsChromeIOS(ios && /CriOS/.test(navigator.userAgent));
+    // Detectar si es Chrome o un navegador in-app en iOS
+    setIsChromeIOS(ios && (/CriOS/.test(navigator.userAgent) || /FBAV|FBAN|Instagram/.test(navigator.userAgent)));
   }, []);
 
   const subscribePush = async () => {
@@ -111,6 +111,13 @@ export function PushPrompt({ orderId, clientId }: { orderId?: string, clientId?:
     }
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("¡Link copiado con éxito!", {
+      description: "Abrí Safari, pegalo en la barra de direcciones y tocá Compartir > Añadir a Inicio."
+    });
+  };
+
   if (!isSupported) return null;
   if (isSubscribed) {
     return (
@@ -134,12 +141,23 @@ export function PushPrompt({ orderId, clientId }: { orderId?: string, clientId?:
       </div>
 
       {isIOS && (!isStandalone || isChromeIOS) ? (
-        <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg flex gap-2">
-          <Info className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>
-            Usás <strong>iPhone</strong>. Para recibir notificaciones debés instalar la app desde <strong>Safari</strong> (botón Compartir y <strong>Añadir a Inicio</strong>).
-            {isChromeIOS && " Si instalaste la app usando Chrome, por favor eliminala y volvé a instalarla desde Safari."}
-          </p>
+        <div className="bg-blue-50 text-blue-800 text-xs p-4 rounded-xl flex flex-col gap-3">
+          <div className="flex gap-2">
+            <Info className="w-5 h-5 shrink-0 mt-0.5 text-blue-600" />
+            <p className="leading-relaxed">
+              Estás en <strong>iPhone</strong>. Para recibir notificaciones debés instalar la app exclusivamente desde <strong>Safari</strong> (botón Compartir y <strong>Añadir a Inicio</strong>).
+              {isChromeIOS && " Si instalaste la app usando Chrome o desde otra red social, por favor eliminala primero."}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="w-full bg-white hover:bg-blue-100 border-blue-200 text-blue-700 font-semibold mt-1"
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Copiar link para abrir en Safari
+          </Button>
         </div>
       ) : (
         <Button
