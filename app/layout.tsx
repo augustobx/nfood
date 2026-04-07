@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "nfood Online",
+  title: "Raptor Burgers Online",
   description: "Pedí tu comida rápida online rápida y fácilmente.",
   manifest: "/manifest.json",
   appleWebApp: {

@@ -3,17 +3,17 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, DollarSign, AlertOctagon, Utensils, ArrowUpRight } from "lucide-react";
+import { Package, TrendingUp, DollarSign, AlertOctagon, Utensils, ArrowUpRight } from "lucide-react";
 import {
    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { format, subDays, isAfter, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
-export function MetricsClient({ orders, products }: { orders: any[], products: any[] }) {
+export function MetricsClient({ orders, products, ingredients }: { orders: any[], products: any[], ingredients: any[] }) {
    const [timeRange, setTimeRange] = useState("30");
 
-   const { filteredOrders, chartData, totals } = useMemo(() => {
+   const { filteredOrders, chartData, totals, ingredientUsageData } = useMemo(() => {
       let startDate = new Date(0);
       const now = new Date();
 
@@ -23,12 +23,49 @@ export function MetricsClient({ orders, products }: { orders: any[], products: a
 
       const fOrders = orders.filter(o => isAfter(new Date(o.createdAt), startDate));
 
+      
+      const usageMap: Record<string, { id: string, name: string, stock: number, consumed: number, cost: number }> = {};
+      ingredients.forEach(i => {
+          usageMap[i.id] = { id: i.id, name: i.name, stock: i.stock, consumed: 0, cost: i.costPerUnit || 0 };
+      });
+
       let tRevenue = 0;
       let tExpenses = 0;
       fOrders.forEach(o => {
          tRevenue += o.total;
          o.items?.forEach((item: any) => {
             tExpenses += (item.product?.suggestedCost || 0) * item.quantity;
+            
+            // Calculate detailed ingredient usage
+            const removedIngIds = item.removedIngredients?.map((r:any) => r.ingredientId) || [];
+            
+            if (item.product?.isCombo && item.comboItems) {
+               for (const ci of item.comboItems) {
+                  const ciRemovedIds = ci.removedIngredients?.map((r:any) => r.ingredientId) || [];
+                  for (const ing of ci.product.ingredients || []) {
+                     if (!ciRemovedIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                        usageMap[ing.ingredientId].consumed += ing.quantity * item.quantity;
+                     }
+                  }
+               }
+            } else if (item.isHalfAndHalf && item.secondHalfProduct) {
+               for (const ing of item.product?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     usageMap[ing.ingredientId].consumed += (ing.quantity * item.quantity) / 2;
+                  }
+               }
+               for (const ing of item.secondHalfProduct?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     usageMap[ing.ingredientId].consumed += (ing.quantity * item.quantity) / 2;
+                  }
+               }
+            } else {
+               for (const ing of item.product?.ingredients || []) {
+                  if (!removedIngIds.includes(ing.ingredientId) && usageMap[ing.ingredientId]) {
+                     usageMap[ing.ingredientId].consumed += ing.quantity * item.quantity;
+                  }
+               }
+            }
          });
       });
 
@@ -58,9 +95,12 @@ export function MetricsClient({ orders, products }: { orders: any[], products: a
          fechaStr: format(new Date(d.date + "T12:00:00"), "d MMM", { locale: es })
       }));
 
+      const usageArray = Object.values(usageMap).sort((a,b) => (b.consumed * b.cost) - (a.consumed * a.cost));
+
       return {
          filteredOrders: fOrders,
          chartData: cDataFormatted,
+         ingredientUsageData: usageArray,
          totals: {
             revenue: tRevenue,
             expenses: tExpenses,
@@ -223,6 +263,44 @@ export function MetricsClient({ orders, products }: { orders: any[], products: a
                </CardContent>
             </Card>
          </div>
+
+         <Card>
+            <CardHeader className="bg-slate-50 border-b">
+               <CardTitle className="text-slate-800 font-bold flex items-center gap-2">
+                  <Package className="w-5 h-5 text-orange-600" /> Control Fino de Insumos (Consumo e Inventario)
+               </CardTitle>
+               <CardDescription>Muestra exactamente cuánto stock teórico se gastó en base a las ventas del período seleccionado (Aplica exclusión de sin TACC, sin sal, etc según pedido).</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+               <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-100 text-slate-500 font-semibold border-b">
+                     <tr>
+                        <th className="px-4 py-3">Insumo / Ingrediente</th>
+                        <th className="px-4 py-3 text-right">Cant. Consumida (Uds)</th>
+                        <th className="px-4 py-3 text-right">Gasto Teórico ($)</th>
+                        <th className="px-4 py-3 text-right">Stock Actual</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y text-slate-700">
+                     {ingredientUsageData.filter(i => i.consumed > 0).length === 0 && (
+                        <tr><td colSpan={4} className="p-8 text-center italic text-muted-foreground">No hubo consumo registrado en este período.</td></tr>
+                     )}
+                     {ingredientUsageData.filter(i => i.consumed > 0).map(i => (
+                        <tr key={i.id} className="hover:bg-slate-50">
+                           <td className="px-4 py-3 font-semibold">{i.name}</td>
+                           <td className="px-4 py-3 text-right font-black text-slate-800">{i.consumed.toLocaleString('es-AR', { maximumFractionDigits: 2 })}</td>
+                           <td className="px-4 py-3 text-right text-orange-600 font-bold">${(i.consumed * i.cost).toLocaleString('es-AR')}</td>
+                           <td className="px-4 py-3 text-right">
+                              <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${i.stock < 10 ? 'bg-red-100 text-red-700' : 'bg-slate-100'}`}>
+                                 {i.stock.toLocaleString('es-AR', { maximumFractionDigits: 1 })} left
+                              </span>
+                           </td>
+                        </tr>
+                     ))}
+                  </tbody>
+               </table>
+            </CardContent>
+         </Card>
       </div>
    );
 }

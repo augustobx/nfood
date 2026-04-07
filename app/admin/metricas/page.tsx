@@ -4,13 +4,21 @@ import { MetricsClient } from "./MetricsClient";
 export const dynamic = "force-dynamic";
 
 export default async function MetricsPage() {
-  const [orders, products] = await Promise.all([
+  const [orders, products, ingredients] = await Promise.all([
      prisma.order.findMany({
        where: { status: { not: 'CANCELLED' } },
        include: {
          items: {
            include: {
-             product: true
+             removedIngredients: true,
+             product: { include: { ingredients: true } },
+             secondHalfProduct: { include: { ingredients: true } },
+             comboItems: {
+               include: {
+                 removedIngredients: true,
+                 product: { include: { ingredients: true } }
+               }
+             }
            }
          }
        },
@@ -18,6 +26,9 @@ export default async function MetricsPage() {
      }),
      prisma.product.findMany({
        where: { isActive: true },
+       orderBy: { name: 'asc' }
+     }),
+     prisma.ingredient.findMany({
        orderBy: { name: 'asc' }
      })
   ]);
@@ -30,7 +41,7 @@ export default async function MetricsPage() {
            Inteligencia de negocios y Food Cost general.
         </p>
       </div>    
-      <MetricsClient orders={orders} products={products} />
+      <MetricsClient orders={orders} products={products} ingredients={ingredients} />
     </div>
   );
 }
