@@ -1,9 +1,21 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { LayoutDashboard, ShoppingBag, Settings, Menu, Users, Dices, PackageOpen, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import AdminLoginForm from "./AdminLoginForm";
+import { LogoutButton } from "./LogoutButton";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // LECTURA DE SEGURIDAD: Verificamos si existe la cookie de admin
+  const cookieStore = await cookies();
+  const isAdmin = cookieStore.get("admin_session")?.value === "true";
+
+  // Si no es admin, cortamos el renderizado aquí y le mostramos el Login
+  if (!isAdmin) {
+    return <AdminLoginForm />;
+  }
+
   const routes = [
     { name: "Live Dashboard", href: "/admin/live", icon: LayoutDashboard },
     { name: "Catálogo", href: "/admin/catalog", icon: ShoppingBag },
@@ -19,12 +31,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex h-14 items-center border-b border-slate-800 px-4">
           <Link href="/admin/live" className="flex items-center gap-2 font-bold text-xl">nfood Admin</Link>
         </div>
-        <nav className="flex-1 space-y-1 p-4">
-          {routes.map((route) => (
-            <Link key={route.href} href={route.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-300 transition-all hover:bg-slate-800 hover:text-white">
-              <route.icon className="h-5 w-5" /> {route.name}
-            </Link>
-          ))}
+        <nav className="flex-1 p-4 flex flex-col">
+          <div className="space-y-1">
+            {routes.map((route) => (
+              <Link key={route.href} href={route.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-300 transition-all hover:bg-slate-800 hover:text-white">
+                <route.icon className="h-5 w-5" /> {route.name}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-auto border-t border-slate-800 pt-4">
+            <LogoutButton />
+          </div>
         </nav>
       </aside>
 
@@ -37,18 +54,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span className="sr-only">Menú</span>
               </Button>
             } />
-            <SheetContent side="left" className="w-64 bg-slate-900 border-none p-0 text-white">
-              <div className="flex h-14 items-center border-b border-slate-800 px-4">nfood Admin</div>
-              <nav className="p-4 space-y-1">
-                {routes.map((route) => (
-                  <Link key={route.href} href={route.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-300 hover:text-white">
-                    <route.icon className="h-5 w-5" /> {route.name}
-                  </Link>
-                ))}
+            <SheetContent side="left" className="w-64 bg-slate-900 border-none p-0 text-white flex flex-col">
+              <div className="flex h-14 items-center border-b border-slate-800 px-4 font-bold">nfood Admin</div>
+              <nav className="flex-1 p-4 flex flex-col">
+                <div className="space-y-1">
+                  {routes.map((route) => (
+                    <Link key={route.href} href={route.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-300 hover:text-white">
+                      <route.icon className="h-5 w-5" /> {route.name}
+                    </Link>
+                  ))}
+                </div>
+                <div className="mt-auto border-t border-slate-800 pt-4">
+                  <LogoutButton />
+                </div>
               </nav>
             </SheetContent>
           </Sheet>
-          <span className="font-bold">Admin Panel</span>
+          <span className="font-bold text-slate-800">Admin Panel</span>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </div>
