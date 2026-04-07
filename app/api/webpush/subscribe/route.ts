@@ -10,23 +10,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid subscription payload" }, { status: 400 });
     }
 
-    // Upsert subscription based on endpoint (which is unique per browser)
-    await prisma.pushSubscription.upsert({
-      where: { endpoint: subscription.endpoint },
-      update: {
-        p256dh: subscription.keys.p256dh,
-        auth: subscription.keys.auth,
-        orderId: orderId || null,
-        clientId: clientId || null,
-      },
-      create: {
-        endpoint: subscription.endpoint,
-        p256dh: subscription.keys.p256dh,
-        auth: subscription.keys.auth,
-        orderId: orderId || null,
-        clientId: clientId || null,
-      }
+    // Buscamos si ya existe el endpoint
+    const existingSub = await prisma.pushSubscription.findFirst({
+      where: { endpoint: subscription.endpoint }
     });
+
+    if (existingSub) {
+      // Si existe, lo actualizamos
+      await prisma.pushSubscription.update({
+        where: { id: existingSub.id },
+        data: {
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+          orderId: orderId || null,
+          clientId: clientId || null,
+        }
+      });
+    } else {
+      // Si no existe, lo creamos
+      await prisma.pushSubscription.create({
+        data: {
+          endpoint: subscription.endpoint,
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+          orderId: orderId || null,
+          clientId: clientId || null,
+        }
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

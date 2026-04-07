@@ -49,9 +49,9 @@ model SystemConfig {
 
 model PushSubscription {
   id              String   @id @default(uuid())
-  endpoint        String   @unique
-  p256dh          String
-  auth            String
+  endpoint        String   @db.Text
+  p256dh          String   @db.Text
+  auth            String   @db.Text
   orderId         String?  // The order this subscription tracks
   clientId        String?  // The registered client (optional)
   createdAt       DateTime @default(now())
