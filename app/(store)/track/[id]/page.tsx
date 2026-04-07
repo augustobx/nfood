@@ -4,9 +4,12 @@ import { Copy, MapPin, Package, CheckCircle2, Clock, MapPinIcon } from "lucide-r
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AutoRefresh from "./AutoRefresh";
+import MPReturnHandler from "./MPReturnHandler";
+import { revalidatePath } from "next/cache";
 
-export default async function TrackOrderPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string }> }) {
+  const { id } = await props.params;
+  const searchParams = await props.searchParams;
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -23,6 +26,24 @@ export default async function TrackOrderPage({ params }: { params: Promise<{ id:
 
   if (!order) return notFound();
 
+  let isCancelled = order.status === "CANCELLED";
+
+  // MP Check: timeout or user abandon
+  if (order.paymentMethod === "MP" && order.paymentStatus === "PENDING" && !isCancelled) {
+     const elapsedMin = (new Date().getTime() - order.createdAt.getTime()) / 60000;
+     const isAborted = searchParams?.payment === "mp_pending" || searchParams?.status === "failure" || searchParams?.status === "pending";
+     
+     if (elapsedMin > 5 || isAborted) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "CANCELLED" }
+        });
+        isCancelled = true;
+        order.status = "CANCELLED";
+        revalidatePath("/admin/live");
+     }
+  }
+
   const statuses = [
     { id: "NEW", label: "Recibido", icon: Package },
     { id: "IN_PROCESS", label: "Preparando", icon: Clock },
@@ -30,12 +51,12 @@ export default async function TrackOrderPage({ params }: { params: Promise<{ id:
     { id: "DELIVERED", label: "Entregado", icon: CheckCircle2 }
   ];
 
-  const isCancelled = order.status === "CANCELLED";
   const currentIndex = statuses.findIndex(s => s.id === order.status);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <AutoRefresh intervalMs={30000} />
+      {searchParams?.status && <MPReturnHandler status={searchParams.status} />}
       
       <div className="text-center space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>
@@ -48,7 +69,7 @@ export default async function TrackOrderPage({ params }: { params: Promise<{ id:
         <Card className="border-destructive/50 bg-destructive/10">
           <CardContent className="pt-6 text-center text-destructive">
             <h2 className="text-2xl font-bold mb-2">Pedido Cancelado</h2>
-            <p>Tu pedido ha sido cancelado. Comunicate con nosotros para más información.</p>
+            <p>{order.paymentMethod === 'MP' ? 'Cancelado por demora en el pago o por decisión del usuario.' : 'Tu pedido ha sido cancelado. Comunicate con nosotros para más información.'}</p>
           </CardContent>
         </Card>
       ) : (

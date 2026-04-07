@@ -124,18 +124,27 @@ export default function CheckoutPage() {
       const result = await createOrder({ ...formData, items: finalItems, total, baseUrl });
       if (result.success) {
         setIsSuccess(true);
-        clearCart();
-        toast.success("¡Pedido enviado con éxito!", { description: formData.paymentMethod === 'MP' ? "Redirigiendo a Mercado Pago..." : "Cocina ya lo está preparando." });
-        
-        try {
-           const audio = new Audio('https://www.myinstants.com/media/sounds/dinosaur-roar.mp3');
-           audio.play();
-        } catch(err) { console.error("Audio play failed"); }
+        clearCart(); // Always clear cart so it doesn't duplicate
 
-        if (result.mpInitPoint) {
-            window.location.href = result.mpInitPoint;
+        if (formData.paymentMethod === 'MP') {
+           // Si es MP, silenciar éxito y mandar directo
+           toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
+           
+           if (result.mpInitPoint) {
+              // Hacemos push al tracker para que si vuelve atrás caiga en el tracker y no en checkout
+              window.history.replaceState(null, "", `/track/${result.orderId}?payment=mp_pending`);
+              window.location.href = result.mpInitPoint;
+           } else {
+              router.push(`/track/${result.orderId}`);
+           }
         } else {
-            router.push(`/track/${result.orderId}`);
+           // Efectivo: Mostrar éxito y rugido
+           toast.success("¡Pedido enviado con éxito!", { description: "Cocina ya lo está preparando." });
+           try {
+              const audio = new Audio('https://www.myinstants.com/media/sounds/dinosaur-roar.mp3');
+              audio.play();
+           } catch(err) { console.error("Audio play failed"); }
+           router.push(`/track/${result.orderId}`);
         }
       } else {
         throw new Error(result.error);
