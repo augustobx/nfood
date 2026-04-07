@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, ChevronDown, Plus, Minus, Search, Layers, Star, User, ReceiptText, Info, Gift } from "lucide-react";
+import { ShoppingBag, ChevronDown, Plus, Minus, Search, Layers, Star, User, ReceiptText, Info, Gift, BellRing } from "lucide-react";
 import { AuthModal } from "@/components/AuthModal";
 import { RouletteModal } from "@/components/RouletteModal";
 import { motion, AnimatePresence, Variants } from "framer-motion";
@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-// The Product Item Expandable Component
+// Componente ExpandableProductCard (sin cambios)
 function ExpandableProductCard({ product, categoryProducts = [] }: { product: any, categoryProducts?: any[] }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { addItem } = useCartStore();
@@ -129,7 +129,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
             <div className="px-4 pb-6 pt-2 space-y-6">
               <p className="text-sm text-slate-600 bg-white p-3 border rounded-xl shadow-sm">{product.description || "Añade a tu pedido directamente desde aquí."}</p>
 
-              {/* Halves Selector */}
+              {/* Selector de Mitades (sin cambios) */}
               {product.allowHalf && !product.onlyHalf && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Elegí la otra mitad</h4>
@@ -148,10 +148,10 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
                 </div>
               )}
 
-              {/* Ingredients Config */}
+              {/* Config de Ingredientes (sin cambios) */}
               {!product.isCombo && product.ingredients?.length > 0 && product.allowRemoveIngredients !== false && (
                 <div className="space-y-3">
-                  <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Ingredientes </h4>
+                  <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Ingredientes</h4>
                   <div className="grid gap-2 bg-white p-3 border rounded-xl">
                     {product.ingredients.map((pi: any) => (
                       <div key={pi.ingredient.id} className="flex items-center space-x-3">
@@ -174,7 +174,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
                 </div>
               )}
 
-              {/* Combo Personalization */}
+              {/* Personalización de Combo (sin cambios) */}
               {product.isCombo && product.comboItemsConfig?.some((ci: any) => ci.product.ingredients?.length > 0 && ci.product.allowRemoveIngredients !== false) && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-purple-800 uppercase tracking-tight">Personalizar por dentro</h4>
@@ -208,7 +208,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
                 </div>
               )}
 
-              {/* Extras */}
+              {/* Extras (sin cambios) */}
               {product.extras?.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-bold text-sm text-slate-800 uppercase tracking-tight">Agregale Extras</h4>
@@ -245,7 +245,7 @@ function ExpandableProductCard({ product, categoryProducts = [] }: { product: an
                 />
               </div>
 
-              {/* Checkout Strip */}
+              {/* Checkout Strip (sin cambios) */}
               <div className="flex items-center gap-3 pt-2">
                 <div className="flex items-center gap-2 bg-white border shadow-sm rounded-full p-1 border-slate-200">
                   <button onClick={(e) => { e.stopPropagation(); setQuantity(Math.max(1, quantity - 1)) }} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-600">-</button>
@@ -377,7 +377,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
   return (
     <div className="min-h-screen pb-32" style={mainBackgroundStyles}>
 
-      {/* Header Banner */}
+      {/* Header Banner (sin cambios) */}
       <div className="bg-brand-primary pb-12 pt-12 px-4 rounded-b-[40px] shadow-sm mb-[-20px] relative z-0 border-b-4" style={{ borderColor: 'rgba(0,0,0,0.05)' }}>
 
         <div className="absolute top-4 right-4 flex flex-col items-end gap-2 z-20">
@@ -421,7 +421,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
           </div>
         )}
 
-        {/* Search Bar */}
+        {/* Search Bar (sin cambios) */}
         <div className="bg-white p-2 border shadow-lg shadow-orange-500/5 rounded-2xl flex items-center gap-2 sticky top-4 z-40">
           <Search className="w-5 h-5 text-muted-foreground ml-2" />
           <Input
@@ -433,7 +433,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
           {searchTerm && <Button variant="ghost" size="sm" onClick={() => setSearchTerm("")}>x</Button>}
         </div>
 
-        {/* Searching mode */}
+        {/* Searching mode (sin cambios) */}
         {searchTerm.length > 2 ? (
           <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-sm border overflow-hidden">
             <div className="p-4 border-b bg-slate-50/50">
@@ -446,7 +446,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
             )}
           </div>
         ) : (
-          /* Normal Accordion Mode */
+          /* Normal Accordion Mode (sin cambios) */
           <div className="space-y-4">
 
             {/* Combos Accordion */}
@@ -531,7 +531,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
         )}
       </div>
 
-      {/* Floating Sticky Cart Button */}
+      {/* Floating Sticky Cart Button (sin cambios) */}
       <AnimatePresence>
         {hasItems && (
           <motion.div
@@ -566,26 +566,31 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
         )}
       </AnimatePresence>
 
-      {/* CORRECCIÓN: Globo de bienvenida transformado en Modal Central */}
+      {/* MODIFICADO: Globo de bienvenida transformado en Modal Central Moderno */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           >
-            <div className="bg-white p-6 rounded-3xl shadow-2xl max-w-sm w-full border-4 border-orange-200 text-center space-y-5 relative overflow-hidden">
-              <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
-                <Info className="w-8 h-8 text-orange-600 animate-pulse" />
+            <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center space-y-6 relative overflow-hidden">
+              {/* Ícono más moderno con fondo suave */}
+              <div className="mx-auto w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center shrink-0 border border-slate-200 shadow-inner">
+                <BellRing className="w-10 h-10 text-orange-600 animate-in spin-in-1-1/4" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">¡Bienvenido!</h3>
+
+              {/* Tipografía más moderna y limpia */}
+              <div className="space-y-1.5">
+                <h3 className="text-3xl font-extrabold text-slate-900 tracking-tighter">¡RAAAWR!</h3>
                 <p className="text-slate-600 font-medium leading-tight">{config?.welcomeBalloonText}</p>
               </div>
+
+              {/* Botón más diseñado con sombra suave y gradiente */}
               <Button
                 onClick={handleAcceptWelcome}
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black text-lg h-14 rounded-2xl shadow-lg shadow-orange-600/20 transition-all"
+                className="w-full h-14 rounded-2xl font-black text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-600/30 transition-all scale-100 hover:scale-105 active:scale-95"
               >
                 Aceptar
               </Button>
@@ -594,6 +599,7 @@ export function StorefrontClient({ categories, combos, loggedClient, config, pri
         )}
       </AnimatePresence>
 
+      {/* Ruleta (sin cambios) */}
       {config?.isRouletteActive && prizes.length > 0 && !showSplash && (
         <div className="fixed bottom-[110px] right-6 z-[90]">
           <motion.div
