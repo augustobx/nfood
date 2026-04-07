@@ -110,7 +110,10 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
             "IN_PROCESS": "🔥 ¡Tu pedido ya se está cocinando / en proceso!",
             "PENDING_DELIVERY": "⏱️ ¡Tu pedido está listo! Estamos esperando al mensajero.",
             "FINISHED": "✅ ¡Tu pedido ya está listo para retirar por el local!",
-            "DELIVERED": "🛵 ¡Tu pedido ya salió! En breve está en tu casa.",
+            // AQUÍ ESTÁ LA LÓGICA DINÁMICA SEGÚN SI ES DELIVERY O RETIRO
+            "DELIVERED": currentOrder?.needsDelivery
+              ? "🛵 ¡Tu pedido ya salió! En breve está en tu casa."
+              : "🎉 ¡Pedido entregado! Gracias por tu compra.",
             "CANCELLED": "❌ Tu pedido ha sido cancelado."
           };
 
