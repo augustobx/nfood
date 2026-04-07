@@ -40,7 +40,7 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in">
       <AutoRefresh intervalMs={30000} />
-      <MPReturnHandler isStart={searchParams?.mp_start === "1"} status={searchParams?.status || undefined} orderId={order.id} />
+      <MPReturnHandler status={searchParams?.status || undefined} orderId={order.id} />
       
       <div className="text-center space-y-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Estado de tu pedido</h1>

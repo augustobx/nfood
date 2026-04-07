@@ -127,12 +127,12 @@ export default function CheckoutPage() {
         clearCart(); // Always clear cart so it doesn't duplicate
 
         if (formData.paymentMethod === 'MP') {
-           // Si es MP, vamos al track y de ahí disparamos hacia MP
            toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
            
            if (result.mpInitPoint) {
-              sessionStorage.setItem(`mp_init_${result.orderId}`, result.mpInitPoint);
-              router.push(`/track/${result.orderId}?mp_start=1`);
+              sessionStorage.setItem(`mp_checkout_${result.orderId}`, "true");
+              window.history.replaceState(null, "", `/track/${result.orderId}`);
+              window.location.href = result.mpInitPoint;
            } else {
               router.push(`/track/${result.orderId}`);
            }

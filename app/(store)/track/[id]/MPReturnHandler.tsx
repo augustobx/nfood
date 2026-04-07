@@ -3,24 +3,15 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { cancelOrderFromMP } from "@/app/actions/checkout";
 
-export default function MPReturnHandler({ status, isStart, orderId }: { status?: string, isStart?: boolean, orderId: string }) {
+export default function MPReturnHandler({ status, orderId }: { status?: string, orderId: string }) {
   useEffect(() => {
     const handleMP = async () => {
-      if (isStart) {
-         const mpUrl = sessionStorage.getItem(`mp_init_${orderId}`);
-         if (mpUrl) {
-            sessionStorage.removeItem(`mp_init_${orderId}`);
-            sessionStorage.setItem(`mp_attempt_${orderId}`, "1");
-            window.location.replace(mpUrl);
-         } else if (sessionStorage.getItem(`mp_attempt_${orderId}`)) {
-            // El usuario hizo BACK desde Mercado Pago y no pagó.
-            toast.error("Pago Cancelado", { description: "Has salido de Mercado Pago sin completar el pago." });
-            await cancelOrderFromMP(orderId);
-            window.location.reload();
-         }
-      }
+      const memoryKey = `mp_checkout_${orderId}`;
+      const isApproved = status === "approved" || status === "success";
 
-      if (status === "approved" || status === "success") {
+      if (isApproved) {
+        // Successful payment, let's play sound and clear memory
+        sessionStorage.removeItem(memoryKey);
         toast.success("¡Pago Confirmado!", { description: "Mercado Pago ha validado el pago con éxito. ¡Gracias!" });
         try {
           const audio = new Audio("https://www.myinstants.com/media/sounds/dinosaur-roar.mp3");
@@ -28,10 +19,20 @@ export default function MPReturnHandler({ status, isStart, orderId }: { status?:
         } catch (err) {
           console.error("Audio block", err);
         }
+      } else {
+        // Not approved. Either they arrived directly (e.g. tracking link) 
+        // OR they just hit "Back" from MP (the memoryKey is still alive).
+        if (sessionStorage.getItem(memoryKey)) {
+           // They came back from MP uncompleted!
+           sessionStorage.removeItem(memoryKey);
+           toast.error("Pago Cancelado", { description: "Has salido de Mercado Pago o no pudimos validar el pago en tiempo real." });
+           await cancelOrderFromMP(orderId);
+           window.location.reload();
+        }
       }
     };
     
     handleMP();
-  }, [status, isStart, orderId]);
+  }, [status, orderId]);
   return null;
 }
