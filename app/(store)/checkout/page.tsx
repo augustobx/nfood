@@ -127,7 +127,8 @@ export default function CheckoutPage() {
            toast.loading("Redirigiendo a Mercado Pago...", { duration: 3000 });
            
            if (result.mpInitPoint) {
-              clearCart();
+              // NO HACER clearCart() ACA!! Si vaciamos el carrito, React dispara agresivamente
+              // la redirección a "/" antes de que el navegador logre viajar a Mercado Pago.
               window.location.assign(`/track/${result.orderId}?mp_start=1&mp_url=${encodeURIComponent(result.mpInitPoint)}`);
            } else {
               setIsSuccess(true);

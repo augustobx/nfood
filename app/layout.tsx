@@ -27,6 +27,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) { },
+                    function(err) { console.log('SW registration failed: ', err); }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
