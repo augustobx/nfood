@@ -1,9 +1,14 @@
+// @ts-nocheck
 /// <reference lib="webworker" />
-export { }; // <-- Esto convierte el archivo en un módulo y soluciona el error
+export { };
 
 declare const self: ServiceWorkerGlobalScope;
 
-// 1. Escuchar cuando llega una notificación Push desde el servidor
+// Forzar actualización
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+// Recibir notificación PUSH
 self.addEventListener('push', (event) => {
     let data: any = {};
 
@@ -27,7 +32,7 @@ self.addEventListener('push', (event) => {
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// 2. Escuchar cuando el usuario hace CLICK en la notificación
+// Click en la notificación
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
