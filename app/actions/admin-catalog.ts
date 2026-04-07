@@ -43,7 +43,6 @@ export async function upsertProduct(data: {
       suggestedCost: data.suggestedCost || 0,
       points: data.points,
       description: data.description,
-      categoryId: data.categoryId || undefined,
       imageUrl: data.imageUrl,
       allowHalf: data.allowHalf,
       onlyHalf: data.onlyHalf,
@@ -60,10 +59,11 @@ export async function upsertProduct(data: {
         prisma.product.update({
           where: { id: data.id },
           data: {
-            ...payload,
-            ingredients: { create: data.ingredientsData.map(ing => ({ ingredientId: ing.id, isRemovable: true, quantity: ing.quantity })) },
-            extras: { create: data.extraIds.map(id => ({ extraId: id })) },
-            comboItemsConfig: data.isCombo ? { create: data.comboItemsData.map(item => ({ productId: item.id, quantity: item.quantity })) } : undefined
+             ...payload,
+             category: data.categoryId ? { connect: { id: data.categoryId } } : { disconnect: true },
+             ingredients: { create: data.ingredientsData.map(ing => ({ ingredientId: ing.id, isRemovable: true, quantity: ing.quantity })) },
+             extras: { create: data.extraIds.map(id => ({ extraId: id })) },
+             comboItemsConfig: data.isCombo ? { create: data.comboItemsData.map(item => ({ productId: item.id, quantity: item.quantity })) } : undefined
           }
         })
       ]);
@@ -73,6 +73,7 @@ export async function upsertProduct(data: {
         data: {
           ...payload,
           isActive: true,
+          category: data.categoryId ? { connect: { id: data.categoryId } } : undefined,
           ingredients: { create: data.ingredientsData.map(ing => ({ ingredientId: ing.id, isRemovable: true, quantity: ing.quantity })) },
           extras: { create: data.extraIds.map(id => ({ extraId: id })) },
           comboItemsConfig: data.isCombo ? { create: data.comboItemsData.map(item => ({ productId: item.id, quantity: item.quantity })) } : undefined
