@@ -36,7 +36,22 @@ export function PushPrompt({ orderId, clientId }: { orderId?: string, clientId?:
       // Check existing subscription
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
-          if (sub) setIsSubscribed(true);
+          if (sub) {
+            setIsSubscribed(true);
+
+            // ¡EL PARCHE SILENCIOSO!
+            // Si el dispositivo ya estaba suscrito, actualizamos el backend 
+            // con el ID de este nuevo pedido sin que el usuario tenga que tocar nada.
+            fetch('/api/webpush/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                subscription: sub,
+                orderId,
+                clientId
+              })
+            }).catch(e => console.error("Error actualizando subscripción silenciosa:", e));
+          }
         });
       });
     }
@@ -48,7 +63,7 @@ export function PushPrompt({ orderId, clientId }: { orderId?: string, clientId?:
 
     // Detectar si es Chrome o un navegador in-app en iOS
     setIsChromeIOS(ios && (/CriOS/.test(navigator.userAgent) || /FBAV|FBAN|Instagram/.test(navigator.userAgent)));
-  }, []);
+  }, [orderId, clientId]); // <-- Es vital que estén en las dependencias del hook
 
   const subscribePush = async () => {
     try {
