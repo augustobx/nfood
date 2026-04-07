@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AutoRefresh from "./AutoRefresh";
 import MPReturnHandler from "./MPReturnHandler";
+import { PushPrompt } from "./PushPrompt";
 import { revalidatePath } from "next/cache";
 
 export default async function TrackOrderPage(props: { params: Promise<{ id: string }>, searchParams?: Promise<{ status?: string, payment?: string, mp_start?: string, mp_url?: string }> }) {
@@ -97,6 +98,10 @@ export default async function TrackOrderPage(props: { params: Promise<{ id: stri
             </div>
           </div>
         </Card>
+      )}
+
+      {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+         <PushPrompt orderId={order.id} clientId={order.clientId || undefined} />
       )}
 
       {order.messenger && order.status === "FINISHED" && (

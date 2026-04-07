@@ -41,7 +41,22 @@ model SystemConfig {
   mpAccessToken    String?
   mpPublicKey      String?
 
+  vapidPublicKey   String? // Web Push PubKey
+  vapidPrivateKey  String? // Web Push PrivKey
+
   updatedAt       DateTime @updatedAt
+}
+
+model PushSubscription {
+  id              String   @id @default(uuid())
+  endpoint        String   @unique
+  p256dh          String
+  auth            String
+  orderId         String?  // The order this subscription tracks
+  clientId        String?  // The registered client (optional)
+  createdAt       DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model RoulettePrize {

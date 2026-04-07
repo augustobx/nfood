@@ -88,6 +88,55 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
           data: { points: { decrement: currentOrder.earnedPoints } }
        });
     }
+
+    // DISPATCH WEB PUSH
+    try {
+       const systemConfig = await prisma.systemConfig.findFirst();
+       if (systemConfig?.vapidPublicKey && systemConfig?.vapidPrivateKey) {
+          // Dynamic import or require to avoid client-side bundling issues if any
+          const webpush = require("web-push");
+          webpush.setVapidDetails(
+            typeof window === 'undefined' && process.env.BASE_URL ? process.env.BASE_URL : 'mailto:soporte@nanolabs.online',
+            systemConfig.vapidPublicKey,
+            systemConfig.vapidPrivateKey
+          );
+          
+          const subs = await prisma.pushSubscription.findMany({
+             where: { orderId }
+          });
+          
+          if (subs.length > 0) {
+             const statusMap: Record<string, string> = {
+                "IN_PROCESS": "🔥 ¡Tu pedido ya se está cocinando!",
+                "PENDING_DELIVERY": "🛵 ¡Salió a reparto! En breve llega.",
+                "FINISHED": "✅ ¡Ya podés retirar tu pedido por el local!",
+                "DELIVERED": "🎉 Pedido entregado. ¡Gracias por elegirnos!",
+                "CANCELLED": "❌ Tu pedido ha sido cancelado."
+             };
+             
+             const payload = JSON.stringify({
+                title: "Actualización de tu pedido",
+                body: statusMap[newStatus] || "Tu pedido cambió de estado.",
+                url: `/track/${orderId}`
+             });
+             
+             for (const sub of subs) {
+                try {
+                   await webpush.sendNotification({
+                      endpoint: sub.endpoint,
+                      keys: { auth: sub.auth, p256dh: sub.p256dh }
+                   }, payload);
+                } catch (pushErr: any) {
+                   if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
+                      await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                   }
+                }
+             }
+          }
+       }
+    } catch(e) {
+       console.error("Web Push Server error", e);
+    }
     
     revalidatePath("/admin/live");
     revalidatePath(`/track/${order.id}`);
