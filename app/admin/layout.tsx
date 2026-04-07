@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen bg-neutral-100">
       <aside className="hidden md:flex w-64 flex-col bg-slate-900 text-white">
         <div className="flex h-14 items-center border-b border-slate-800 px-4">
-          <Link href="/admin/live" className="flex items-center gap-2 font-bold text-xl">nfood Admin</Link>
+          <Link href="/admin/live" className="flex items-center gap-2 font-bold text-xl">Raptor Burgers Admin</Link>
         </div>
         <nav className="flex-1 p-4 flex flex-col">
           <div className="space-y-1">
