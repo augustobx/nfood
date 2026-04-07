@@ -46,13 +46,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-white px-6 md:hidden">
           <Sheet>
-            {/* CORRECCIÓN: asChild evita que el menú se rompa en la transición */}
-            <SheetTrigger asChild>
+            {/* VOLVEMOS AL RENDER={} QUE EXIGE BASE UI */}
+            <SheetTrigger render={
               <Button variant="ghost" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menú</span>
               </Button>
-            </SheetTrigger>
+            } />
             <SheetContent side="left" className="w-64 bg-slate-900 border-none p-0 text-white flex flex-col">
               <div className="flex h-14 items-center border-b border-slate-800 px-4 font-bold">nfood Admin</div>
               <nav className="flex-1 p-4 flex flex-col">
