@@ -1,11 +1,21 @@
 "use client";
+import { useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { logoutAdmin } from "@/app/actions/admin-auth";
+import { useRouter } from "next/navigation";
 
 export function LogoutButton() {
+    const router = useRouter();
+
+    // Limpieza agresiva: apenas carga el Admin, destrabamos la pantalla
+    useEffect(() => {
+        document.body.style.pointerEvents = "auto";
+        document.body.removeAttribute("data-scroll-locked");
+    }, []);
+
     const handleLogout = async () => {
         await logoutAdmin();
-        window.location.reload();
+        router.refresh();
     };
 
     return (

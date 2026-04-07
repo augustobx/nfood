@@ -1,14 +1,22 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loginAdmin } from "@/app/actions/admin-auth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function AdminLoginForm() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
+
+    // Limpieza preventiva: aseguramos que el body no esté bloqueado
+    useEffect(() => {
+        document.body.style.pointerEvents = "auto";
+        document.body.removeAttribute("data-scroll-locked");
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -16,8 +24,8 @@ export default function AdminLoginForm() {
         const res = await loginAdmin(password);
         if (res.success) {
             toast.success("Acceso concedido");
-            // Refrescamos la página para que Next.js lea la cookie y nos de paso
-            window.location.reload();
+            // Transición suave nativa de Next.js (evita el bug de la pantalla oscura)
+            router.refresh();
         } else {
             toast.error(res.error);
             setLoading(false);

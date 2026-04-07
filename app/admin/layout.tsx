@@ -7,11 +7,9 @@ import AdminLoginForm from "./AdminLoginForm";
 import { LogoutButton } from "./LogoutButton";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // LECTURA DE SEGURIDAD: Verificamos si existe la cookie de admin
   const cookieStore = await cookies();
   const isAdmin = cookieStore.get("admin_session")?.value === "true";
 
-  // Si no es admin, cortamos el renderizado aquí y le mostramos el Login
   if (!isAdmin) {
     return <AdminLoginForm />;
   }
@@ -29,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen bg-neutral-100">
       <aside className="hidden md:flex w-64 flex-col bg-slate-900 text-white">
         <div className="flex h-14 items-center border-b border-slate-800 px-4">
-          <Link href="/admin/live" className="flex items-center gap-2 font-bold text-xl">Raptor Burgers Admin</Link>
+          <Link href="/admin/live" className="flex items-center gap-2 font-bold text-xl">nfood Admin</Link>
         </div>
         <nav className="flex-1 p-4 flex flex-col">
           <div className="space-y-1">
@@ -48,12 +46,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center gap-4 border-b bg-white px-6 md:hidden">
           <Sheet>
-            <SheetTrigger render={
+            {/* CORRECCIÓN: asChild evita que el menú se rompa en la transición */}
+            <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0 md:hidden">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Menú</span>
               </Button>
-            } />
+            </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-slate-900 border-none p-0 text-white flex flex-col">
               <div className="flex h-14 items-center border-b border-slate-800 px-4 font-bold">nfood Admin</div>
               <nav className="flex-1 p-4 flex flex-col">
