@@ -94,9 +94,9 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
       const systemConfig = await prisma.systemConfig.findFirst();
       if (systemConfig?.vapidPublicKey && systemConfig?.vapidPrivateKey) {
         const webpush = require("web-push");
-        // CORRECCIÓN: Restaurado tu email real para que Google/Apple autoricen el envío.
+        // ESTRICTAMENTE MAILTO: Sin variables de entorno que lo rompan
         webpush.setVapidDetails(
-          process.env.BASE_URL || 'mailto:soporte@nanolabs.online',
+          'mailto:soporte@nanolabs.online',
           systemConfig.vapidPublicKey,
           systemConfig.vapidPrivateKey
         );
@@ -120,7 +120,8 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
             url: `/track/${orderId}`
           });
 
-          for (const sub of subs) {
+          // Enviar en paralelo para evitar que un error frene a los demás
+          const pushPromises = subs.map(async (sub) => {
             try {
               await webpush.sendNotification({
                 endpoint: sub.endpoint,
@@ -131,7 +132,8 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
                 await prisma.pushSubscription.delete({ where: { id: sub.id } });
               }
             }
-          }
+          });
+          await Promise.allSettled(pushPromises);
         }
       }
     } catch (e) {
@@ -202,9 +204,9 @@ export async function dispatchMessengerRoadmap(messengerId: string) {
       const systemConfig = await prisma.systemConfig.findFirst();
       if (systemConfig?.vapidPublicKey && systemConfig?.vapidPrivateKey) {
         const webpush = require("web-push");
-        // CORRECCIÓN: Restaurado tu email real también aquí.
+        // ESTRICTAMENTE MAILTO
         webpush.setVapidDetails(
-          process.env.BASE_URL || 'mailto:soporte@nanolabs.online',
+          'mailto:soporte@nanolabs.online',
           systemConfig.vapidPublicKey,
           systemConfig.vapidPrivateKey
         );
@@ -220,7 +222,7 @@ export async function dispatchMessengerRoadmap(messengerId: string) {
             url: `/`
           });
 
-          for (const sub of subs) {
+          const pushPromises = subs.map(async (sub) => {
             try {
               await webpush.sendNotification({
                 endpoint: sub.endpoint,
@@ -231,7 +233,8 @@ export async function dispatchMessengerRoadmap(messengerId: string) {
                 await prisma.pushSubscription.delete({ where: { id: sub.id } });
               }
             }
-          }
+          });
+          await Promise.allSettled(pushPromises);
         }
       }
     } catch (e) {
