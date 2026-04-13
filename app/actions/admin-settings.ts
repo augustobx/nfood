@@ -23,8 +23,12 @@ export async function updateConfig(id: string, data: any) {
     revalidatePath("/admin/live");
     revalidatePath("/"); // Update storefront state
     return { success: true };
-  } catch (error) {
-    return { success: false, error: "Error al actualizar la configuración" };
+  } catch (error: any) {
+    // AHORA VEREMOS EL ERROR REAL EN LA CONSOLA DEL SERVIDOR (o en Vercel Logs)
+    console.error("🚨 Error Prisma en updateConfig:", error);
+
+    // Devolvemos el mensaje exacto para que el toast te diga qué campo falló
+    return { success: false, error: error.message || "Error interno al actualizar" };
   }
 }
 

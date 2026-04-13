@@ -4,11 +4,17 @@ import withPWAInit from "@ducanh2912/next-pwa";
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  register: true
+  register: true,
+  workboxOptions: {
+    // Excluir todas las rutas de /admin y /api para que no sean cacheadas ni interceptadas
+    exclude: [
+      /^\/admin\/.*$/i,
+      /^\/api\/.*$/i
+    ]
+  }
 });
 
 const nextConfig: NextConfig = {
-  // Indica a Turbopack que no intente empaquetar estos módulos
   serverExternalPackages: ["@prisma/client", "prisma", "mariadb"],
   images: {
     remotePatterns: [
