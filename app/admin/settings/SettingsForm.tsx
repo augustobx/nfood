@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateConfig, broadcastPushNotification } from "@/app/actions/admin-settings";
-import { Save, Store, Palette, Wallet, Megaphone, Send, Printer, CreditCard } from "lucide-react";
+import { Save, Store, Palette, Wallet, Megaphone, Send, Printer, CreditCard, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -57,6 +57,12 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
       printerCounterSize: cfg.printerCounterSize || "80mm",
       printerKitchenName: cfg.printerKitchenName,
       printerKitchenSize: cfg.printerKitchenSize || "80mm",
+
+      // WhatsApp Bot
+      whatsappBotEnabled: cfg.whatsappBotEnabled,
+      metaApiToken: cfg.metaApiToken,
+      metaPhoneNumberId: cfg.metaPhoneNumberId,
+      metaVerifyToken: cfg.metaVerifyToken,
     };
 
     const result = await updateConfig(cfg.id, dataToSave);
@@ -100,10 +106,11 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 bg-slate-200">
+        <TabsList className="grid w-full grid-cols-7 bg-slate-200">
           <TabsTrigger value="general"><Store className="w-4 h-4 mr-2" /> Negocio</TabsTrigger>
           <TabsTrigger value="finance"><Wallet className="w-4 h-4 mr-2" /> Pagos</TabsTrigger>
           <TabsTrigger value="mercadopago"><CreditCard className="w-4 h-4 mr-2" /> M. Pago</TabsTrigger>
+          <TabsTrigger value="whatsapp"><MessageCircle className="w-4 h-4 mr-2" /> WhatsApp</TabsTrigger>
           <TabsTrigger value="marketing"><Megaphone className="w-4 h-4 mr-2" /> Splash</TabsTrigger>
           <TabsTrigger value="theme"><Palette className="w-4 h-4 mr-2" /> Diseño</TabsTrigger>
           <TabsTrigger value="printers"><Printer className="w-4 h-4 mr-2" /> Impresoras</TabsTrigger>
@@ -216,6 +223,56 @@ export function SettingsForm({ initialConfig }: { initialConfig: any }) {
                   <p className="text-xs text-muted-foreground">Clave pública de la aplicación.</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* WhatsApp Bot Tab */}
+        <TabsContent value="whatsapp" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bot Automático de WhatsApp</CardTitle>
+              <CardDescription>Configuración de Meta Cloud API para automatizar pedidos.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between border-2 border-green-200 rounded-xl p-4 bg-green-50">
+                <div className="space-y-0.5">
+                  <Label className="text-base text-slate-800 font-bold">Activar Bot de WhatsApp</Label>
+                  <p className="text-sm text-muted-foreground">Si se activa, el sistema responderá automáticamente a los mensajes entrantes para tomar pedidos.</p>
+                </div>
+                <Switch checked={cfg.whatsappBotEnabled} onCheckedChange={v => updateField('whatsappBotEnabled', v)} />
+              </div>
+
+              {cfg.whatsappBotEnabled && (
+                <div className="space-y-4 bg-slate-50 p-4 border rounded-xl animate-in fade-in">
+                  <div className="space-y-2">
+                    <Label className="font-bold">Token de Acceso Permanente (Meta API)</Label>
+                    <Input
+                      type="password"
+                      placeholder="EAA..."
+                      value={cfg.metaApiToken || ''}
+                      onChange={e => updateField('metaApiToken', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    <Label className="font-bold">ID del Número de Teléfono (Phone Number ID)</Label>
+                    <Input
+                      placeholder="1234567890"
+                      value={cfg.metaPhoneNumberId || ''}
+                      onChange={e => updateField('metaPhoneNumberId', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    <Label className="font-bold">Token de Verificación (Webhook Verify Token)</Label>
+                    <Input
+                      placeholder="mi_token_secreto_123"
+                      value={cfg.metaVerifyToken || ''}
+                      onChange={e => updateField('metaVerifyToken', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Este token debes ingresarlo en la configuración del Webhook en Meta Developers.</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -44,6 +44,12 @@ model SystemConfig {
   vapidPublicKey   String? // Web Push PubKey
   vapidPrivateKey  String? // Web Push PrivKey
 
+  // WhatsApp Bot
+  whatsappBotEnabled Boolean @default(false)
+  metaApiToken       String? @db.Text
+  metaPhoneNumberId  String?
+  metaVerifyToken    String?
+
   updatedAt       DateTime @updatedAt
 
   // Configuracion de Impresoras
@@ -331,3 +337,11 @@ model Session {
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
+model WhatsAppSession {
+  phone        String   @id
+  state        String
+  cart         Json?
+  tempData     Json?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+}
